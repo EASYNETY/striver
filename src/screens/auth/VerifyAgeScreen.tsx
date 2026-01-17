@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ActivityIndicator, Alert, Image } from 'react-native';
 import { COLORS, SPACING } from '../../constants/theme';
 import { ChevronLeft, Camera, ShieldCheck, CheckCircle2 } from 'lucide-react-native';
 import { db } from '../../api/firebase';
@@ -12,38 +12,78 @@ const VerifyAgeScreen = ({ navigation, route }: any) => {
     const [verifying, setVerifying] = useState(false);
     const [verified, setVerified] = useState(false);
 
+    const [userAge, setUserAge] = useState<number | null>(null);
+    const [ageError, setAgeError] = useState(false);
+    const [photoUri, setPhotoUri] = useState<string | null>(null);
+
     useEffect(() => {
-        if (!accountType) {
-            userService.getCurrentUserProfile().then(profile => {
-                if (profile?.accountType) {
-                    setAccountType(profile.accountType);
+        userService.getCurrentUserProfile().then(profile => {
+            if (profile?.accountType) setAccountType(profile.accountType);
+            if (profile?.dob) {
+                const parts = profile.dob.split('/');
+                if (parts.length === 3) {
+                    const birth = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                    const today = new Date();
+                    let age = today.getFullYear() - birth.getFullYear();
+                    const m = today.getMonth() - birth.getMonth();
+                    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+                    setUserAge(age);
+
+                    // Requirement: Teenagers or children can NOT be verified
+                    if (age < 18) {
+                        setAgeError(true);
+                    }
                 }
-            });
-        }
+            }
+        });
     }, []);
+
     const [steps, setSteps] = useState([
         { id: 1, label: 'Email Verified', status: 'completed' },
-        { id: 2, label: 'Identity/Age Check', status: 'pending' },
+        { id: 2, label: 'Identity Check (18+ Only)', status: 'pending' },
         { id: 3, label: 'Account Activation', status: 'pending' },
     ]);
 
-    const startVerification = () => {
-        setVerifying(true);
-        // Mocking facial recognition verification
-        setTimeout(() => {
-            setVerifying(false);
-            setVerified(true);
-            setSteps(prev => prev.map(s => s.id === 2 ? { ...s, status: 'completed' } : s));
-            logEvent(EVENTS.MODERATION_APPROVED, { type: 'age_verification' });
-        }, 3000);
+    const startVerification = async () => {
+        if (ageError) {
+            Alert.alert(
+                "Verification Restricted",
+                "Full Identity Verification is only available for users 18 and older. Younger users are protected by our baseline safety standards instead."
+            );
+            return;
+        }
+
+        // Use Image Picker to take a selfie
+        const picker = require('react-native-image-picker');
+        const result = await picker.launchCamera({
+            mediaType: 'photo',
+            cameraType: 'front',
+            quality: 0.8
+        });
+
+        if (result.assets && result.assets[0].uri) {
+            setPhotoUri(result.assets[0].uri);
+            setVerifying(true);
+            // Simulate AI analysis
+            setTimeout(() => {
+                setVerifying(false);
+                setVerified(true);
+                setSteps(prev => prev.map(s => s.id === 2 ? { ...s, status: 'completed' } : s));
+                logEvent(EVENTS.MODERATION_APPROVED, { type: 'age_verification' });
+            }, 3000);
+        }
     };
 
     const handleContinue = () => {
+        if (ageError) {
+            // If they are under 18, they just skip verification but can still use the app (with restrictions)
+            navigation.navigate('InterestsSelection');
+            return;
+        }
+
         if (accountType === 'family') {
             navigation.navigate('FamilySetup', { uid });
         } else {
-            // Should not typically reach here as individuals go to InterestsSelection,
-            // but in case they do, we send them to personalization.
             navigation.navigate('InterestsSelection');
         }
     };
@@ -61,17 +101,31 @@ const VerifyAgeScreen = ({ navigation, route }: any) => {
                 {!verified ? (
                     <View style={styles.scanContainer}>
                         <View style={styles.faceFrame}>
-                            {verifying ? (
+                            {photoUri ? (
+                                <Image source={{ uri: photoUri }} style={[styles.faceFrame, { marginBottom: 0 }]} />
+                            ) : verifying ? (
                                 <ActivityIndicator size="large" color={COLORS.primary} />
                             ) : (
                                 <Camera color={COLORS.textSecondary} size={48} />
                             )}
                         </View>
-                        <Text style={styles.instructionTitle}>Position your face</Text>
-                        <Text style={styles.instructionDesc}>
-                            We use secure facial analysis to verify your age and keep the community safe.
-                            Only real humans are allowed on Striver.
-                        </Text>
+                        {ageError ? (
+                            <>
+                                <Text style={[styles.instructionTitle, { color: COLORS.error || '#FF3B30' }]}>Verification Restricted</Text>
+                                <Text style={styles.instructionDesc}>
+                                    Striver Identity Verification is strictly for users 18+.
+                                    Younger users are protected by our automated safety guardrails.
+                                </Text>
+                            </>
+                        ) : (
+                            <>
+                                <Text style={styles.instructionTitle}>Position your face</Text>
+                                <Text style={styles.instructionDesc}>
+                                    We use secure facial analysis to verify your age and keep the community safe.
+                                    Only real humans are allowed on Striver.
+                                </Text>
+                            </>
+                        )}
                     </View>
                 ) : (
                     <View style={styles.successContainer}>
@@ -104,12 +158,15 @@ const VerifyAgeScreen = ({ navigation, route }: any) => {
 
                 {!verified ? (
                     <TouchableOpacity
-                        style={[styles.primaryBtn, verifying && { opacity: 0.7 }]}
+                        style={[
+                            styles.primaryBtn,
+                            (verifying || ageError) && { opacity: 0.7, backgroundColor: ageError ? COLORS.surface : COLORS.primary }
+                        ]}
                         onPress={startVerification}
-                        disabled={verifying}
+                        disabled={verifying || ageError}
                     >
-                        <Text style={styles.primaryBtnText}>
-                            {verifying ? 'Verifying...' : 'Start Scan'}
+                        <Text style={[styles.primaryBtnText, ageError && { color: COLORS.textSecondary }]}>
+                            {verifying ? 'Verifying...' : ageError ? 'Verification Locked' : 'Start Scan'}
                         </Text>
                     </TouchableOpacity>
                 ) : (

@@ -8,6 +8,7 @@ import userService from '../../api/userService';
 const FamilySetupScreen = ({ navigation, route }: any) => {
     const { uid } = route.params || {};
     const [children, setChildren] = useState<any[]>([]);
+    const [approvals, setApprovals] = useState<any[]>([]);
 
     useEffect(() => {
         if (!uid) return;
@@ -36,7 +37,15 @@ const FamilySetupScreen = ({ navigation, route }: any) => {
                 console.error("Error fetching children:", error);
             });
 
-        return () => unsubscribe();
+        // Sync approvals
+        const approvalsUnsubscribe = userService.getApprovalsListener(uid, (data) => {
+            setApprovals(data);
+        });
+
+        return () => {
+            unsubscribe();
+            approvalsUnsubscribe();
+        };
     }, [uid]);
 
     const addChild = () => {
@@ -70,6 +79,33 @@ const FamilySetupScreen = ({ navigation, route }: any) => {
                         </View>
                     </View>
                 </View>
+
+                {approvals.length > 0 && (
+                    <View style={{ marginBottom: SPACING.xl }}>
+                        <Text style={styles.sectionTitle}>Pending Approvals</Text>
+                        {approvals.map(approval => (
+                            <View key={approval.id} style={styles.approvalCard}>
+                                <View style={styles.approvalInfo}>
+                                    <Text style={styles.approvalTitle}>{approval.title}</Text>
+                                    <View style={styles.approvalActions}>
+                                        <TouchableOpacity
+                                            style={[styles.actionBtn, { borderColor: '#FF3B30' }]}
+                                            onPress={() => userService.actionApproval(uid, approval.id, 'rejected')}
+                                        >
+                                            <Text style={{ color: '#FF3B30', fontSize: 12, fontWeight: '700' }}>Reject</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            style={[styles.actionBtn, { backgroundColor: COLORS.primary }]}
+                                            onPress={() => userService.actionApproval(uid, approval.id, 'approved')}
+                                        >
+                                            <Text style={{ color: COLORS.background, fontSize: 12, fontWeight: '700' }}>Approve</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                            </View>
+                        ))}
+                    </View>
+                )}
 
                 <Text style={styles.sectionTitle}>Child Profiles</Text>
 
@@ -261,6 +297,35 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '700',
         color: COLORS.primary,
+    },
+    approvalCard: {
+        backgroundColor: 'rgba(143, 251, 185, 0.05)',
+        borderRadius: 16,
+        padding: SPACING.md,
+        marginBottom: SPACING.sm,
+        borderWidth: 1,
+        borderColor: 'rgba(143, 251, 185, 0.2)',
+    },
+    approvalInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    approvalTitle: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: COLORS.white,
+        flex: 1,
+    },
+    approvalActions: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    actionBtn: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 8,
+        borderWidth: 1,
     },
 });
 

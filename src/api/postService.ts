@@ -64,7 +64,7 @@ class PostService {
             videoUrl,
             caption: data.caption,
             hashtags: data.hashtags || [],
-            squadId: data.squadId || null, // Add squadId to post
+            squadId: data.squadId || null,
             status,
             likes: 0,
             comments: 0,
@@ -74,6 +74,16 @@ class PostService {
         };
 
         const docRef = await this.postsCollection.add(postData);
+
+        // REAL PARENT APPROVAL: If child, send request to parent
+        if (isJuniorByTier && userData?.accountType === 'family' && userData?.parentUid) {
+            await userService.requestApproval(currentUser.uid, 'video', {
+                postId: docRef.id,
+                title: `New video post: ${data.caption}`,
+                videoUrl: videoUrl
+            });
+        }
+
         return docRef.id;
     }
 

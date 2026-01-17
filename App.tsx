@@ -9,6 +9,7 @@ import userService from './src/api/userService';
 // Navigators
 import AuthNavigator from './src/navigation/AuthNavigator';
 import MainNavigator from './src/navigation/MainNavigator';
+import ModernSplashScreen from './src/components/common/ModernSplashScreen';
 
 // State Management (Simplified)
 const Stack = createNativeStackNavigator();
@@ -58,7 +59,7 @@ const App = () => {
         };
     }, []);
 
-    if (initializing) return null; // Show splash screen or loading spinner
+    if (initializing || loadingProfile) return <ModernSplashScreen />;
 
     return (
         <SafeAreaProvider>

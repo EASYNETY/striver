@@ -16,6 +16,7 @@ try {
 
 import postService from '../../api/postService';
 import rewardService from '../../api/rewardService';
+import userService from '../../api/userService';
 
 const UploadScreen = ({ navigation, route }: any) => {
     const { squadId } = route.params || {};
@@ -89,9 +90,14 @@ const UploadScreen = ({ navigation, route }: any) => {
 
             await rewardService.updateTaskProgress('post_response', 1);
 
+            const userData = await userService.getCurrentUserProfile();
+            const isJunior = userData?.ageTier === 'junior_baller';
+
             Alert.alert(
-                "Success",
-                "Your video has been posted!",
+                isJunior ? "Review Required" : "Success",
+                isJunior
+                    ? "Great video! It has been sent to your parent for approval before it goes live on the feed."
+                    : "Your video has been posted!",
                 [{ text: "Great!", onPress: () => navigation.navigate('HomeFeed') }]
             );
         } catch (error) {

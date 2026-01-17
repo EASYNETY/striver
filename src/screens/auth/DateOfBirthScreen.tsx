@@ -102,7 +102,18 @@ const DateOfBirthScreen = ({ navigation, route }: any) => {
                         placeholder="DD/MM/YYYY"
                         placeholderTextColor={COLORS.textSecondary}
                         value={dob}
-                        onChangeText={setDob}
+                        onChangeText={(text) => {
+                            // Only allow numbers
+                            const cleaned = text.replace(/[^0-9]/g, '');
+                            let formatted = cleaned;
+                            if (cleaned.length > 2) {
+                                formatted = cleaned.slice(0, 2) + '/' + cleaned.slice(2);
+                            }
+                            if (cleaned.length > 4) {
+                                formatted = cleaned.slice(0, 2) + '/' + cleaned.slice(2, 4) + '/' + cleaned.slice(4, 8);
+                            }
+                            setDob(formatted);
+                        }}
                         keyboardType="number-pad"
                         maxLength={10}
                     />
