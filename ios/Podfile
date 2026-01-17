@@ -27,6 +27,9 @@ end
 
 project 'HelloWorld.xcodeproj'
 
+# Resolve version mismatch between Firebase and Google Sign-in
+$FirebaseSDKVersion = '11.1.0'
+
 target 'HelloWorld' do
   config = use_native_modules!
 
