@@ -37,7 +37,14 @@ jobs:
 
       - name: Build for Simulator
         run: |
-          npx react-native build-ios --mode Release --scheme "HelloWorld" --extra-params "-sdk iphonesimulator -destination 'generic/platform=iOS Simulator'"
+          xcodebuild -workspace ios/HelloWorld.xcworkspace \
+                     -scheme HelloWorld \
+                     -configuration Release \
+                     -sdk iphonesimulator \
+                     -derivedDataPath ios/build \
+                     CODE_SIGN_IDENTITY="" \
+                     CODE_SIGNING_REQUIRED=NO \
+                     CODE_SIGNING_ALLOWED=NO
         # Note: To build a signed .ipa for real devices, you would need to 
         # configure certificates and provisioning profiles here.
 
