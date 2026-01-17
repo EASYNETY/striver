@@ -16,23 +16,16 @@ yarn-debug.log*
 yarn-error.log*
 
 # Xcode / iOS
-*.xcworkspace/
-*.xcodeproj/
-*.moved-aside
-*.pbxuser
-!default.pbxuser
-*.mode1v3
-*.mode2v3
-*.perspectivev3
-*.xccheckout
-*.xcuserdata/
-ios/.generated/
+ios/build/
 ios/Pods/
 ios/Podfile.lock
-ios/build/
-ios/*.xcworkspace/xcshareddata/
-ios/*.xcodeproj/xcshareddata/
-ios/*.xcworkspace/contents.xcworkspacedata
+ios/.generated/
+*.xcuserdata/
+*.xcworkspace/
+!*.xcodeproj/
+!*.xcworkspace/xcshareddata/
+!*.xcodeproj/xcshareddata/
+!*.xcworkspace/contents.xcworkspacedata
 
 # Android
 *.iml

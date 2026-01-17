@@ -29,11 +29,11 @@ jobs:
       - name: Install CocoaPods
         run: |
           cd ios
-          pod install
+          pod install --repo-update
 
       - name: Build for Simulator
         run: |
-          npx react-native build-ios --mode Release --simulator "iPhone 15"
+          npx react-native build-ios --mode Release --simulator "iPhone 15" --scheme "HelloWorld" --project-path "ios/HelloWorld.xcodeproj"
         # Note: To build a signed .ipa for real devices, you would need to 
         # configure certificates and provisioning profiles here.
 
