@@ -37,7 +37,7 @@ jobs:
 
       - name: Build for Simulator
         run: |
-          npx react-native build-ios --mode Release --simulator "iPhone 15" --scheme "HelloWorld" --project-path "ios/HelloWorld.xcodeproj"
+          npx react-native build-ios --mode Release --scheme "HelloWorld" --extra-params "-sdk iphonesimulator -destination 'generic/platform=iOS Simulator'"
         # Note: To build a signed .ipa for real devices, you would need to 
         # configure certificates and provisioning profiles here.
 
