@@ -1,0 +1,95 @@
+# React Native / Expo general
+/.expo/
+.expo-shared/
+expo-env.d.ts
+eas.json
+*.jks
+*.keystore
+*.mobileprovision
+*.orig.*
+build/
+dist/
+coverage/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Xcode / iOS
+*.xcworkspace/
+*.xcodeproj/
+*.moved-aside
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.xccheckout
+*.xcuserdata/
+ios/.generated/
+ios/Pods/
+ios/Podfile.lock
+ios/build/
+ios/*.xcworkspace/xcshareddata/
+ios/*.xcodeproj/xcshareddata/
+ios/*.xcworkspace/contents.xcworkspacedata
+
+# Android
+*.iml
+.gradle
+/local.properties
+/.idea/
+android/.gradle/
+android/app/build/
+android/app/release/
+android/app/src/main/assets/index.android.bundle
+android/app/src/main/assets/index.android.delta
+android/app/src/main/assets/index.android.packager.map
+android/app/debug/
+android/app/release/
+android/keystores/
+.DS_Store
+captures/
+.externalNativeBuild
+.cxx/
+
+# node.js / metro / bundler
+node_modules/
+npm-debug.log
+yarn-error.log
+/.yarn/unplugged/
+/.yarn/install-state.gz
+/.pnp.*
+
+# Metro / cache
+/.metro-cache/
+*.watchmanconfig
+watchman.pid
+
+# Temporary / editor files
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Testing & coverage
+coverage/
+jest-report/
+__tests__/__snapshots__/
+
+# Environment / secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Misc
+*.bak
+*.tmp
+*.temp

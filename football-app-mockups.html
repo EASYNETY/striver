@@ -1,0 +1,2081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Football Social App - Visual Mockups</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-green: #8FFBB9;
+            --deep-navy: #0A1128;
+            --dark-surface: #1A1F3A;
+            --pure-white: #FFFFFF;
+            --warning-red: #FF3B30;
+            --success-green: #34C759;
+            --electric-blue: #0A84FF;
+            --neutral-gray: #8E8E93;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0A1128 0%, #1E0A3C 100%);
+            color: var(--pure-white);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .header h1 {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 48px;
+            font-weight: 800;
+            background: linear-gradient(90deg, var(--primary-green) 0%, #00D4FF 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
+        }
+
+        .header p {
+            font-size: 18px;
+            color: var(--neutral-gray);
+        }
+
+        .navigation {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 40px;
+        }
+
+        .nav-btn {
+            padding: 12px 24px;
+            background: var(--dark-surface);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            color: var(--pure-white);
+            font-family: 'Montserrat', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover {
+            background: var(--primary-green);
+            color: var(--deep-navy);
+            transform: translateY(-2px);
+        }
+
+        .nav-btn.active {
+            background: var(--primary-green);
+            color: var(--deep-navy);
+        }
+
+        .screens-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 40px;
+            margin-bottom: 60px;
+        }
+
+        .phone-mockup {
+            background: var(--deep-navy);
+            border-radius: 40px;
+            padding: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            position: relative;
+            aspect-ratio: 9/19.5;
+            overflow: hidden;
+        }
+
+        .phone-screen {
+            background: var(--deep-navy);
+            border-radius: 32px;
+            height: 100%;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .screen-label {
+            text-align: center;
+            margin-top: 16px;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--primary-green);
+        }
+
+        /* Onboarding Screen 1 - Welcome */
+        .welcome-screen {
+            background: linear-gradient(180deg, rgba(10, 17, 40, 0.6) 0%, rgba(10, 17, 40, 0.8) 100%), 
+                        url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 800"><rect fill="%23151c3a" width="400" height="800"/><circle cx="200" cy="400" r="150" fill="%231a2550" opacity="0.5"/></svg>');
+            background-size: cover;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .app-logo {
+            width: 60px;
+            height: 60px;
+            background: var(--primary-green);
+            border-radius: 16px;
+            margin: 40px auto 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 800;
+            font-size: 24px;
+            color: var(--deep-navy);
+            position: relative;
+            z-index: 10;
+        }
+
+        .welcome-content {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 40px 24px;
+            background: linear-gradient(180deg, transparent 0%, rgba(10, 17, 40, 0.95) 30%, rgba(10, 17, 40, 0.98) 100%);
+            z-index: 10;
+        }
+
+        .video-placeholder {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, var(--dark-surface) 0%, #0f1842 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .video-placeholder::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 10px,
+                rgba(143, 251, 185, 0.05) 10px,
+                rgba(143, 251, 185, 0.05) 20px
+            );
+            animation: scan 3s linear infinite;
+        }
+
+        @keyframes scan {
+            from { transform: translateX(-20px); }
+            to { transform: translateX(20px); }
+        }
+
+        .play-icon {
+            width: 64px;
+            height: 64px;
+            background: rgba(143, 251, 185, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+            position: relative;
+            z-index: 1;
+        }
+
+        .play-icon::after {
+            content: '';
+            width: 0;
+            height: 0;
+            border-left: 20px solid var(--primary-green);
+            border-top: 12px solid transparent;
+            border-bottom: 12px solid transparent;
+            margin-left: 4px;
+        }
+
+        .tagline {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 8px;
+            line-height: 1.3;
+        }
+
+        .sub-text {
+            font-size: 14px;
+            color: var(--neutral-gray);
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .cta-button {
+            width: 100%;
+            padding: 18px;
+            background: var(--primary-green);
+            color: var(--deep-navy);
+            border: none;
+            border-radius: 12px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .cta-button:hover {
+            transform: scale(1.02);
+            box-shadow: 0 8px 24px rgba(143, 251, 185, 0.4);
+        }
+
+        /* Sign Up Screen */
+        .signup-screen {
+            padding: 40px 24px;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .back-arrow {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            margin-bottom: 32px;
+        }
+
+        .screen-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 32px;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        .screen-subtitle {
+            font-size: 14px;
+            color: var(--neutral-gray);
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .social-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            flex: 1;
+        }
+
+        .social-btn {
+            padding: 16px 20px;
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            color: var(--pure-white);
+            font-family: 'Montserrat', sans-serif;
+            font-size: 16px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .social-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: var(--primary-green);
+        }
+
+        .social-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+
+        .google-icon {
+            background: white;
+            mask: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="%234285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="%2334A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="%23FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="%23EA4335"/></svg>') center/contain;
+        }
+
+        .facebook-icon {
+            background: #1877F2;
+            mask: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="white" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>') center/contain;
+        }
+
+        .apple-icon {
+            background: white;
+            mask: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="white" d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>') center/contain;
+        }
+
+        .email-icon {
+            background: var(--primary-green);
+            mask: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="white" d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>') center/contain;
+        }
+
+        .legal-text {
+            font-size: 12px;
+            color: var(--neutral-gray);
+            text-align: center;
+            margin-top: auto;
+            line-height: 1.5;
+        }
+
+        .legal-text a {
+            color: var(--electric-blue);
+            text-decoration: none;
+        }
+
+        /* Main Feed Screen */
+        .feed-screen {
+            background: linear-gradient(180deg, rgba(10, 17, 40, 0.7) 0%, rgba(10, 17, 40, 0.9) 100%),
+                        url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 800"><rect fill="%23151c3a" width="400" height="800"/><circle cx="100" cy="200" r="80" fill="%238FFBB9" opacity="0.1"/><circle cx="300" cy="600" r="100" fill="%2300D4FF" opacity="0.1"/></svg>');
+            background-size: cover;
+            height: 100%;
+            position: relative;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 16px 16px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 10;
+            background: linear-gradient(180deg, rgba(10, 17, 40, 0.9) 0%, rgba(10, 17, 40, 0.7) 60%, transparent 100%);
+            gap: 12px;
+        }
+
+        .top-left-content {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-width: 66%;
+        }
+
+        .top-right-content {
+            flex: 1;
+            display: flex;
+            justify-content: flex-end;
+            max-width: 33%;
+        }
+
+        .icon-btn {
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .icon-btn:hover {
+            background: rgba(143, 251, 185, 0.2);
+        }
+
+        .notification-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--warning-red);
+            border-radius: 50%;
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            border: 2px solid var(--deep-navy);
+        }
+
+        .profile-avatar {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--primary-green) 0%, #00D4FF 100%);
+            border-radius: 50%;
+            border: 2px solid var(--pure-white);
+            cursor: pointer;
+        }
+
+        .creator-info-compact {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .creator-header-compact {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .creator-avatar-small {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #FF3B30 0%, #FF9500 100%);
+            border-radius: 50%;
+            border: 2px solid var(--pure-white);
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .follow-btn-small {
+            width: 20px;
+            height: 20px;
+            background: var(--primary-green);
+            border-radius: 50%;
+            border: 2px solid var(--pure-white);
+            position: absolute;
+            bottom: -3px;
+            right: -3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .follow-btn-small::before {
+            content: '+';
+            color: var(--deep-navy);
+            font-weight: 800;
+            font-size: 11px;
+        }
+
+        .creator-username-compact {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .verified-badge-small {
+            width: 14px;
+            height: 14px;
+            background: var(--success-green);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+        }
+
+        .video-title-compact {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            line-height: 1.3;
+            margin-bottom: 4px;
+        }
+
+        .tags-container-compact {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+            margin-bottom: 4px;
+        }
+
+        .tag-compact {
+            padding: 3px 8px;
+            background: rgba(26, 31, 58, 0.9);
+            border-radius: 12px;
+            font-size: 10px;
+            color: var(--primary-green);
+            white-space: nowrap;
+            backdrop-filter: blur(10px);
+        }
+
+        .video-description-compact {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.85);
+            line-height: 1.3;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .player-card {
+            width: 85px;
+            height: 115px;
+            background: linear-gradient(135deg, rgba(143, 251, 185, 0.15) 0%, rgba(0, 212, 255, 0.15) 100%);
+            border: 2px solid var(--primary-green);
+            border-radius: 8px;
+            padding: 6px;
+            backdrop-filter: blur(20px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .card-rating {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--primary-green);
+            margin-bottom: 3px;
+        }
+
+        .card-avatar {
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(135deg, var(--primary-green) 0%, #00D4FF 100%);
+            border-radius: 50%;
+            border: 2px solid var(--pure-white);
+            margin-bottom: 4px;
+        }
+
+        .card-name {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 9px;
+            font-weight: 700;
+            text-align: center;
+            line-height: 1.2;
+            margin-bottom: 2px;
+        }
+
+        .card-position {
+            font-size: 7px;
+            color: var(--primary-green);
+            font-weight: 600;
+        }
+
+        .notification-badge {
+            width: 8px;
+            height: 8px;
+            background: var(--warning-red);
+            border-radius: 50%;
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            border: 2px solid var(--deep-navy);
+        }
+
+        .engagement-stack {
+            position: absolute;
+            bottom: 120px;
+            right: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .engagement-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .engagement-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .engagement-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(143, 251, 185, 0.15);
+            border: 2px solid var(--primary-green);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+            font-size: 22px;
+            color: var(--primary-green);
+        }
+
+        .engagement-count {
+            font-size: 12px;
+            font-weight: 700;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+            color: var(--primary-green);
+        }
+
+        .progress-bar {
+            position: absolute;
+            bottom: 84px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--primary-green);
+            width: 45%;
+            transition: width 0.3s ease;
+        }
+
+        .bottom-nav {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 80px;
+            background: rgba(26, 31, 58, 0.95);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 0 12px;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .nav-item:hover .nav-icon {
+            color: var(--primary-green);
+        }
+
+        .nav-icon {
+            font-size: 24px;
+            color: var(--neutral-gray);
+            transition: all 0.3s ease;
+        }
+
+        .nav-item.active .nav-icon {
+            color: var(--primary-green);
+            filter: drop-shadow(0 0 8px rgba(143, 251, 185, 0.5));
+        }
+
+        .nav-label {
+            font-size: 10px;
+            color: var(--neutral-gray);
+            font-weight: 500;
+        }
+
+        .nav-item.active .nav-label {
+            color: var(--primary-green);
+        }
+
+        .nav-icon-svg {
+            width: 24px;
+            height: 24px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .upload-btn {
+            width: 56px;
+            height: 56px;
+            background: var(--primary-green);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            bottom: 8px;
+            box-shadow: 0 4px 12px rgba(143, 251, 185, 0.4);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upload-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(143, 251, 185, 0.6);
+        }
+
+        .upload-btn::before {
+            content: '+';
+            font-size: 32px;
+            color: var(--deep-navy);
+            font-weight: 700;
+        }
+
+        /* Profile Screen */
+        .profile-screen {
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        .profile-header {
+            padding: 60px 24px 24px;
+            background: linear-gradient(180deg, var(--dark-surface) 0%, var(--deep-navy) 100%);
+            text-align: center;
+            position: relative;
+        }
+
+        .profile-avatar-large {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, var(--primary-green) 0%, #00D4FF 100%);
+            border-radius: 50%;
+            margin: 0 auto 16px;
+            border: 4px solid var(--pure-white);
+            position: relative;
+        }
+
+        .edit-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--primary-green);
+            border-radius: 50%;
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            border: 3px solid var(--deep-navy);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .profile-username {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .profile-bio {
+            font-size: 14px;
+            color: var(--neutral-gray);
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: center;
+            gap: 32px;
+            margin-bottom: 24px;
+        }
+
+        .stat-item {
+            text-align: center;
+            cursor: pointer;
+        }
+
+        .stat-number {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 20px;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--neutral-gray);
+        }
+
+        .ranking-badge {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            padding: 12px 24px;
+            border-radius: 12px;
+            margin: 0 auto 24px;
+            max-width: 200px;
+        }
+
+        .trophy-icon {
+            font-size: 24px;
+        }
+
+        .ranking-text {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            color: var(--deep-navy);
+        }
+
+        .profile-tabs {
+            display: flex;
+            background: var(--dark-surface);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 5;
+        }
+
+        .tab-item {
+            flex: 1;
+            padding: 16px;
+            text-align: center;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--neutral-gray);
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .tab-item.active {
+            color: var(--primary-green);
+            border-bottom-color: var(--primary-green);
+        }
+
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2px;
+        }
+
+        .grid-item {
+            aspect-ratio: 1;
+            background: linear-gradient(135deg, var(--dark-surface) 0%, #0f1842 100%);
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .grid-item:hover {
+            opacity: 0.8;
+        }
+
+        .grid-play-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 32px;
+            height: 32px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+        }
+
+        .grid-views {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 4px 8px;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 4px;
+            backdrop-filter: blur(10px);
+        }
+
+        .grid-duration {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 4px 8px;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 4px;
+            backdrop-filter: blur(10px);
+        }
+
+        /* Thread View */
+        .thread-screen {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .thread-video-header {
+            height: 30%;
+            background: linear-gradient(180deg, rgba(10, 17, 40, 0.7) 0%, rgba(10, 17, 40, 0.9) 100%),
+                        url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"><rect fill="%23151c3a" width="400" height="300"/><circle cx="200" cy="150" r="100" fill="%238FFBB9" opacity="0.1"/></svg>');
+            background-size: cover;
+            position: relative;
+            border-bottom: 2px solid rgba(143, 251, 185, 0.3);
+        }
+
+        .thread-handle {
+            width: 40px;
+            height: 4px;
+            background: var(--neutral-gray);
+            border-radius: 2px;
+            margin: 12px auto;
+        }
+
+        .thread-hint {
+            position: absolute;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            color: var(--neutral-gray);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .thread-content {
+            flex: 1;
+            overflow-y: auto;
+            background: var(--deep-navy);
+        }
+
+        .replies-header {
+            padding: 16px 20px;
+            background: var(--dark-surface);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .replies-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .sort-dropdown {
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            font-size: 12px;
+            color: var(--pure-white);
+            cursor: pointer;
+        }
+
+        .reply-item {
+            padding: 16px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .reply-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .reply-avatar {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #0A84FF 0%, #00D4FF 100%);
+            border-radius: 50%;
+        }
+
+        .reply-user-info {
+            flex: 1;
+        }
+
+        .reply-username {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .reply-timestamp {
+            font-size: 12px;
+            color: var(--neutral-gray);
+        }
+
+        .reply-video-thumb {
+            width: 100%;
+            aspect-ratio: 9/16;
+            background: linear-gradient(135deg, var(--dark-surface) 0%, #0f1842 100%);
+            border-radius: 12px;
+            margin-bottom: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .reply-engagement {
+            display: flex;
+            gap: 20px;
+            font-size: 14px;
+            color: var(--neutral-gray);
+        }
+
+        .reply-engagement-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+        }
+
+        .reply-engagement-item:hover {
+            color: var(--primary-green);
+        }
+
+        .view-nested {
+            color: var(--electric-blue);
+            font-size: 14px;
+            margin-top: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .add-reply-btn {
+            position: sticky;
+            bottom: 0;
+            margin: 16px 20px;
+            padding: 16px;
+            background: var(--primary-green);
+            color: var(--deep-navy);
+            border: none;
+            border-radius: 12px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .add-reply-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 8px 24px rgba(143, 251, 185, 0.4);
+        }
+
+        /* Camera Screen */
+        .camera-screen {
+            height: 100%;
+            background: #000;
+            position: relative;
+        }
+
+        .camera-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle, transparent 40%, rgba(0, 0, 0, 0.5) 100%);
+        }
+
+        .camera-top-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .camera-controls {
+            display: flex;
+            gap: 16px;
+        }
+
+        .timer-display {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Montserrat', sans-serif;
+            font-size: 32px;
+            font-weight: 800;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 12px 24px;
+            border-radius: 24px;
+            backdrop-filter: blur(10px);
+        }
+
+        .camera-bottom {
+            position: absolute;
+            bottom: 40px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 40px;
+            z-index: 10;
+        }
+
+        .record-button {
+            width: 80px;
+            height: 80px;
+            background: var(--pure-white);
+            border-radius: 50%;
+            border: 6px solid rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .record-button:hover {
+            transform: scale(1.1);
+        }
+
+        .record-button.recording {
+            background: var(--warning-red);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .gallery-btn {
+            width: 48px;
+            height: 48px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            cursor: pointer;
+        }
+
+        /* Squads Screen */
+        .squads-screen {
+            height: 100%;
+            overflow-y: auto;
+            background: var(--deep-navy);
+        }
+
+        .squads-header {
+            padding: 60px 20px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .squads-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 32px;
+            font-weight: 800;
+        }
+
+        .featured-banner {
+            margin: 0 20px 24px;
+            height: 200px;
+            background: linear-gradient(135deg, var(--dark-surface) 0%, #0f1842 100%);
+            border-radius: 16px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .featured-banner::before {
+            content: '';
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(143, 251, 185, 0.2) 0%, transparent 70%);
+            border-radius: 50%;
+            top: -50px;
+            right: -50px;
+        }
+
+        .squad-badge {
+            width: 48px;
+            height: 48px;
+            background: var(--primary-green);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            color: var(--deep-navy);
+            z-index: 1;
+        }
+
+        .squad-name {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            z-index: 1;
+        }
+
+        .squad-members {
+            font-size: 14px;
+            color: var(--neutral-gray);
+            z-index: 1;
+        }
+
+        .join-squad-btn {
+            padding: 12px 24px;
+            background: var(--primary-green);
+            color: var(--deep-navy);
+            border: none;
+            border-radius: 8px;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            align-self: flex-end;
+            z-index: 1;
+        }
+
+        .section-header {
+            padding: 0 20px 12px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .my-squads-scroll {
+            display: flex;
+            gap: 16px;
+            padding: 0 20px 24px;
+            overflow-x: auto;
+        }
+
+        .squad-card {
+            min-width: 160px;
+            height: 180px;
+            background: var(--dark-surface);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .squad-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .unread-dot {
+            width: 10px;
+            height: 10px;
+            background: var(--warning-red);
+            border-radius: 50%;
+            position: absolute;
+            top: 12px;
+            right: 12px;
+        }
+
+        .squad-card-badge {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, #FF3B30 0%, #FF9500 100%);
+            border-radius: 12px;
+            margin-bottom: 12px;
+        }
+
+        .squad-card-name {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 600;
+            font-size: 14px;
+            line-height: 1.3;
+        }
+
+        .discover-list {
+            padding: 0 20px;
+        }
+
+        .discover-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .discover-badge {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, var(--electric-blue) 0%, #00D4FF 100%);
+            border-radius: 12px;
+            flex-shrink: 0;
+        }
+
+        .discover-info {
+            flex: 1;
+        }
+
+        .discover-name {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+
+        .discover-desc {
+            font-size: 12px;
+            color: var(--neutral-gray);
+            margin-bottom: 4px;
+        }
+
+        .discover-stats {
+            font-size: 11px;
+            color: var(--neutral-gray);
+        }
+
+        .discover-join-btn {
+            padding: 10px 20px;
+            background: transparent;
+            border: 1px solid var(--primary-green);
+            color: var(--primary-green);
+            border-radius: 8px;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 600;
+            font-size: 12px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        /* News Screen */
+        .news-screen {
+            height: 100%;
+            overflow-y: auto;
+            background: var(--deep-navy);
+        }
+
+        .news-header {
+            padding: 60px 20px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .categories-scroll {
+            display: flex;
+            gap: 12px;
+            padding: 0 20px 20px;
+            overflow-x: auto;
+        }
+
+        .category-chip {
+            padding: 8px 20px;
+            background: var(--dark-surface);
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .category-chip.active {
+            background: var(--primary-green);
+            color: var(--deep-navy);
+        }
+
+        .featured-article {
+            margin: 0 20px 24px;
+            height: 400px;
+            background: linear-gradient(180deg, rgba(10, 17, 40, 0.3) 0%, rgba(10, 17, 40, 0.9) 100%),
+                        url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"><rect fill="%23151c3a" width="400" height="400"/><circle cx="200" cy="200" r="150" fill="%238FFBB9" opacity="0.15"/></svg>');
+            background-size: cover;
+            border-radius: 16px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .article-category {
+            display: inline-block;
+            padding: 6px 12px;
+            background: rgba(26, 31, 58, 0.9);
+            color: var(--primary-green);
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .article-headline {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 24px;
+            font-weight: 800;
+            line-height: 1.3;
+            margin-bottom: 12px;
+        }
+
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--neutral-gray);
+        }
+
+        .article-list {
+            padding: 0 20px;
+        }
+
+        .article-item {
+            display: flex;
+            gap: 16px;
+            padding: 16px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            cursor: pointer;
+        }
+
+        .article-thumb {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, var(--dark-surface) 0%, #0f1842 100%);
+            border-radius: 12px;
+            flex-shrink: 0;
+        }
+
+        .article-content {
+            flex: 1;
+        }
+
+        .article-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            line-height: 1.3;
+            margin-bottom: 8px;
+        }
+
+        .article-excerpt {
+            font-size: 13px;
+            color: var(--neutral-gray);
+            line-height: 1.4;
+            margin-bottom: 8px;
+        }
+
+        @media (max-width: 768px) {
+            .screens-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Football Social App</h1>
+            <p>Interactive Visual Mockups</p>
+        </div>
+
+        <div class="navigation">
+            <button class="nav-btn active" onclick="showScreen('onboarding')">Onboarding</button>
+            <button class="nav-btn" onclick="showScreen('main')">Main App</button>
+            <button class="nav-btn" onclick="showScreen('profile')">Profile & Thread</button>
+            <button class="nav-btn" onclick="showScreen('features')">Features</button>
+        </div>
+
+        <!-- ONBOARDING SCREENS -->
+        <div id="onboarding" class="screens-grid">
+            <div>
+                <div class="phone-mockup">
+                    <div class="phone-screen">
+                        <div class="welcome-screen">
+                            <div class="video-placeholder">
+                                <div class="play-icon"></div>
+                            </div>
+                            <div class="app-logo">S</div>
+                            <div class="welcome-content">
+                                <h2 class="tagline">Your Voice.<br>Your Team.<br>Your Community.</h2>
+                                <p class="sub-text">Join thousands of verified fans</p>
+                                <button class="cta-button">Join Striver</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="screen-label">Welcome Screen</div>
+            </div>
+
+            <div>
+                <div class="phone-mockup">
+                    <div class="phone-screen">
+                        <div class="signup-screen">
+                            <div class="back-arrow">←</div>
+                            <div class="app-logo" style="margin-bottom: 24px;">S</div>
+                            <h1 class="screen-title">Join The Conversation</h1>
+                            <p class="screen-subtitle">Choose your preferred sign-up method</p>
+                            
+                            <div class="social-buttons">
+                                <button class="social-btn">
+                                    <div class="social-icon google-icon"></div>
+                                    Continue with Google
+                                </button>
+                                <button class="social-btn">
+                                    <div class="social-icon facebook-icon"></div>
+                                    Continue with Facebook
+                                </button>
+                                <button class="social-btn">
+                                    <div class="social-icon apple-icon"></div>
+                                    Continue with Apple
+                                </button>
+                                <button class="social-btn">
+                                    <div class="social-icon email-icon"></div>
+                                    Continue with Email
+                                </button>
+                            </div>
+                            
+                            <p class="legal-text">By continuing, you agree to our <a href="#">Terms</a> & <a href="#">Privacy Policy</a></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="screen-label">Sign Up</div>
+            </div>
+        </div>
+
+        <!-- MAIN APP SCREENS -->
+        <div id="main" class="screens-grid" style="display: none;">
+            <div>
+                <div class="phone-mockup">
+                    <div class="phone-screen">
+                        <div class="feed-screen">
+                            <div class="top-bar">
+                                <div class="top-left-content">
+                                    <div class="creator-info-compact">
+                                        <div class="creator-header-compact">
+                                            <div class="creator-avatar-small">
+                                                <div class="follow-btn-small"></div>
+                                            </div>
+                                            <div class="creator-username-compact">
+                                                @footballfanatic
+                                                <span class="verified-badge-small">✓</span>
+                                            </div>
+                                        </div>
+                                        <h3 class="video-title-compact">Incredible goal from the weekend! 🔥</h3>
+                                        <div class="tags-container-compact">
+                                            <span class="tag-compact">#PremierLeague</span>
+                                            <span class="tag-compact">#Goals</span>
+                                            <span class="tag-compact">#Liverpool</span>
+                                        </div>
+                                        <p class="video-description-compact">Can't believe this didn't win goal of the month...</p>
+                                    </div>
+                                </div>
+                                <div class="top-right-content">
+                                    <div class="player-card">
+                                        <div class="card-rating">87</div>
+                                        <div class="card-avatar"></div>
+                                        <div class="card-name">Football<br>Fanatic</div>
+                                        <div class="card-position">CREATOR</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="engagement-stack">
+                                <div class="engagement-btn">
+                                    <div class="engagement-icon">
+                                        <svg class="nav-icon-svg" viewBox="0 0 24 24">
+                                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="currentColor" fill="none"></path>
+                                        </svg>
+                                    </div>
+                                    <div class="engagement-count">12.4K</div>
+                                </div>
+                                <div class="engagement-btn">
+                                    <div class="engagement-icon">
+                                        <svg class="nav-icon-svg" viewBox="0 0 24 24">
+                                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" fill="none"></path>
+                                        </svg>
+                                    </div>
+                                    <div class="engagement-count">342</div>
+                                </div>
+                                <div class="engagement-btn">
+                                    <div class="engagement-icon">
+                                        <svg class="nav-icon-svg" viewBox="0 0 24 24">
+                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" fill="none"></path>
+                                            <circle cx="12" cy="12" r="3" stroke="currentColor" fill="none"></circle>
+                                        </svg>
+                                    </div>
+                                    <div class="engagement-count">45.2K</div>
+                                </div>
+                                <div class="engagement-btn">
+                                    <div class="engagement-icon">
+                                        <svg class="nav-icon-svg" viewBox="0 0 24 24">
+                                            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" stroke="currentColor" fill="none"></path>
+                                            <polyline points="16 6 12 2 8 6" stroke="currentColor" fill="none"></polyline>
+                                            <line x1="12" y1="2" x2="12" y2="15" stroke="currentColor"></line>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="progress-bar">
+                                <div class="progress-fill"></div>
+                            </div>
+
+                            <div class="bottom-nav">
+                                <div class="nav-item active">
+                                    <svg class="nav-icon-svg" viewBox="0 0 24 24" style="color: var(--primary-green);">
+                                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                                    </svg>
+                                    <div class="nav-label" style="color: var(--primary-green);">Home</div>
+                                </div>
+                                <div class="nav-item">
+                                    <svg class="nav-icon-svg" viewBox="0 0 24 24">
+                                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                        <circle cx="9" cy="7" r="4"></circle>
+                                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                    </svg>
+                                    <div class="nav-label">Squads</div>
+                                </div>
+                                <div class="upload-btn"></div>
+                                <div class="nav-item">
+                                    <svg class="nav-icon-svg" viewBox="0 0 24 24">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <polygon points="10,8 16,12 10,16"></polygon>
+                                    </svg>
+                                    <div class="nav-label">Fan Club</div>
+                                </div>
+                                <div class="nav-item">
+                                    <div style="position: relative;">
+                                        <svg class="nav-icon-svg" viewBox="0 0 24 24">
+                                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                                            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                                        </svg>
+                                        <div class="notification-badge"></div>
+                                    </div>
+                                    <div class="nav-label">Alerts</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="screen-label">Home Feed</div>
+            </div>
+
+            <div>
+                <div class="phone-mockup">
+                    <div class="phone-screen">
+                        <div class="camera-screen">
+                            <div class="camera-overlay"></div>
+                            <div class="camera-top-bar">
+                                <div class="icon-btn">✕</div>
+                                <div class="camera-controls">
+                                    <div class="icon-btn">⚡</div>
+                                    <div class="icon-btn">🔄</div>
+                                </div>
+                            </div>
+                            <div class="timer-display">0:00 / 2:00</div>
+                            <div class="camera-bottom">
+                                <div class="gallery-btn"></div>
+                                <div class="record-button"></div>
+                                <div class="gallery-btn">✨</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="screen-label">Camera / Record</div>
+            </div>
+        </div>
+
+        <!-- PROFILE & THREAD SCREENS -->
+        <div id="profile" class="screens-grid" style="display: none;">
+            <div>
+                <div class="phone-mockup">
+                    <div class="phone-screen">
+                        <div class="profile-screen">
+                            <div class="profile-header">
+                                <div class="profile-avatar-large">
+                                    <div class="edit-icon">✏️</div>
+                                </div>
+                                <h2 class="profile-username">@footballfanatic</h2>
+                                <p class="profile-bio">Die-hard Liverpool fan 🔴 | Video creator | Opinions are my own</p>
+                                
+                                <div class="stats-row">
+                                    <div class="stat-item">
+                                        <div class="stat-number">1.2K</div>
+                                        <div class="stat-label">Followers</div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-number">450</div>
+                                        <div class="stat-label">Following</div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-number">89</div>
+                                        <div class="stat-label">Videos</div>
+                                    </div>
+                                </div>
+
+                                <div class="ranking-badge">
+                                    <div class="trophy-icon">🏆</div>
+                                    <div>
+                                        <div class="ranking-text">Rank #142</div>
+                                        <div style="font-size: 11px; opacity: 0.8;">Top 5%</div>
+                                    </div>
+                                </div>
+
+                                <button class="cta-button" style="margin-top: 0;">Edit Profile</button>
+                            </div>
+
+                            <div class="profile-tabs">
+                                <div class="tab-item active">Videos</div>
+                                <div class="tab-item">Replies</div>
+                                <div class="tab-item">Liked</div>
+                                <div class="tab-item">Tagged</div>
+                            </div>
+
+                            <div class="video-grid">
+                                <div class="grid-item">
+                                    <div class="grid-play-icon">▶</div>
+                                    <div class="grid-views">12.4K</div>
+                                    <div class="grid-duration">0:45</div>
+                                </div>
+                                <div class="grid-item">
+                                    <div class="grid-play-icon">▶</div>
+                                    <div class="grid-views">8.2K</div>
+                                    <div class="grid-duration">1:20</div>
+                                </div>
+                                <div class="grid-item">
+                                    <div class="grid-play-icon">▶</div>
+                                    <div class="grid-views">45.1K</div>
+                                    <div class="grid-duration">0:58</div>
+                                </div>
+                                <div class="grid-item">
+                                    <div class="grid-play-icon">▶</div>
+                                    <div class="grid-views">5.3K</div>
+                                    <div class="grid-duration">1:05</div>
+                                </div>
+                                <div class="grid-item">
+                                    <div class="grid-play-icon">▶</div>
+                                    <div class="grid-views">21.7K</div>
+                                    <div class="grid-duration">0:33</div>
+                                </div>
+                                <div class="grid-item">
+                                    <div class="grid-play-icon">▶</div>
+                                    <div class="grid-views">15.9K</div>
+                                    <div class="grid-duration">1:15</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="screen-label">Profile</div>
+            </div>
+
+            <div>
+                <div class="phone-mockup">
+                    <div class="phone-screen">
+                        <div class="thread-screen">
+                            <div class="thread-video-header">
+                                <div class="thread-handle"></div>
+                                <div class="creator-info" style="bottom: 20px;">
+                                    <div class="creator-header">
+                                        <div class="creator-avatar"></div>
+                                        <div class="creator-name">
+                                            @footballfanatic
+                                            <span class="verified-badge">✓</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="thread-hint">
+                                    ↓ Swipe down to return
+                                </div>
+                            </div>
+
+                            <div class="thread-content">
+                                <div class="replies-header">
+                                    <h3 class="replies-title">Replies (142)</h3>
+                                    <select class="sort-dropdown">
+                                        <option>Most Recent</option>
+                                        <option>Most Liked</option>
+                                    </select>
+                                </div>
+
+                                <div class="reply-item">
+                                    <div class="reply-header">
+                                        <div class="reply-avatar"></div>
+                                        <div class="reply-user-info">
+                                            <div class="reply-username">@redsfan23</div>
+                                            <div class="reply-timestamp">2h ago</div>
+                                        </div>
+                                        <div style="color: var(--neutral-gray); cursor: pointer;">⋮</div>
+                                    </div>
+                                    <div class="reply-video-thumb">
+                                        <div class="grid-play-icon" style="width: 48px; height: 48px;">▶</div>
+                                        <div class="grid-duration">0:42</div>
+                                    </div>
+                                    <div class="reply-engagement">
+                                        <div class="reply-engagement-item">❤️ 245</div>
+                                        <div class="reply-engagement-item">💬 12</div>
+                                    </div>
+                                    <div class="view-nested">
+                                        View 5 replies ↓
+                                    </div>
+                                </div>
+
+                                <div class="reply-item">
+                                    <div class="reply-header">
+                                        <div class="reply-avatar" style="background: linear-gradient(135deg, #FF3B30 0%, #FF9500 100%);"></div>
+                                        <div class="reply-user-info">
+                                            <div class="reply-username">@footballpundit</div>
+                                            <div class="reply-timestamp">5h ago</div>
+                                        </div>
+                                        <div style="color: var(--neutral-gray); cursor: pointer;">⋮</div>
+                                    </div>
+                                    <div class="reply-video-thumb">
+                                        <div class="grid-play-icon" style="width: 48px; height: 48px;">▶</div>
+                                        <div class="grid-duration">1:15</div>
+                                    </div>
+                                    <div class="reply-engagement">
+                                        <div class="reply-engagement-item">❤️ 189</div>
+                                        <div class="reply-engagement-item">💬 8</div>
+                                    </div>
+                                </div>
+
+                                <div class="reply-item">
+                                    <div class="reply-header">
+                                        <div class="reply-avatar" style="background: linear-gradient(135deg, #34C759 0%, #30D158 100%);"></div>
+                                        <div class="reply-user-info">
+                                            <div class="reply-username">@tacticaltom</div>
+                                            <div class="reply-timestamp">1d ago</div>
+                                        </div>
+                                        <div style="color: var(--neutral-gray); cursor: pointer;">⋮</div>
+                                    </div>
+                                    <div class="reply-video-thumb">
+                                        <div class="grid-play-icon" style="width: 48px; height: 48px;">▶</div>
+                                        <div class="grid-duration">0:55</div>
+                                    </div>
+                                    <div class="reply-engagement">
+                                        <div class="reply-engagement-item">❤️ 412</div>
+                                        <div class="reply-engagement-item">💬 23</div>
+                                    </div>
+                                    <div class="view-nested">
+                                        View 15 replies ↓
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button class="add-reply-btn">
+                                📹 Add Your Reply
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="screen-label">Thread View</div>
+            </div>
+        </div>
+
+        <!-- FEATURES SCREENS -->
+        <div id="features" class="screens-grid" style="display: none;">
+            <div>
+                <div class="phone-mockup">
+                    <div class="phone-screen">
+                        <div class="squads-screen">
+                            <div class="squads-header">
+                                <h1 class="squads-title">Squads</h1>
+                                <div style="display: flex; gap: 12px;">
+                                    <div class="icon-btn">🔍</div>
+                                    <div class="icon-btn">⚙️</div>
+                                </div>
+                            </div>
+
+                            <div class="featured-banner">
+                                <div class="squad-badge">LFC</div>
+                                <div>
+                                    <div class="squad-name">Liverpool FC Official</div>
+                                    <div class="squad-members">12.4K members</div>
+                                </div>
+                                <button class="join-squad-btn">Join Squad</button>
+                            </div>
+
+                            <div class="section-header">My Squads (4)</div>
+                            <div class="my-squads-scroll">
+                                <div class="squad-card">
+                                    <div class="unread-dot"></div>
+                                    <div class="squad-card-badge"></div>
+                                    <div class="squad-card-name">Premier League Fans</div>
+                                </div>
+                                <div class="squad-card">
+                                    <div class="squad-card-badge" style="background: linear-gradient(135deg, #0A84FF 0%, #00D4FF 100%);"></div>
+                                    <div class="squad-card-name">Tactics & Analysis</div>
+                                </div>
+                                <div class="squad-card">
+                                    <div class="unread-dot"></div>
+                                    <div class="squad-card-badge" style="background: linear-gradient(135deg, #34C759 0%, #30D158 100%);"></div>
+                                    <div class="squad-card-name">Fantasy Football</div>
+                                </div>
+                                <div class="squad-card">
+                                    <div class="squad-card-badge" style="background: linear-gradient(135deg, #FF9500 0%, #FFD700 100%);"></div>
+                                    <div class="squad-card-name">Transfer News</div>
+                                </div>
+                            </div>
+
+                            <div class="section-header">Discover</div>
+                            <div class="discover-list">
+                                <div class="discover-item">
+                                    <div class="discover-badge"></div>
+                                    <div class="discover-info">
+                                        <div class="discover-name">Champions League Hub</div>
+                                        <div class="discover-desc">All things UCL - analysis, predictions, highlights</div>
+                                        <div class="discover-stats">2.1K members • 12 posts today</div>
+                                    </div>
+                                    <button class="discover-join-btn">Join</button>
+                                </div>
+                                <div class="discover-item">
+                                    <div class="discover-badge" style="background: linear-gradient(135deg, #FF3B30 0%, #FF9500 100%);"></div>
+                                    <div class="discover-info">
+                                        <div class="discover-name">Women's Football</div>
+                                        <div class="discover-desc">Celebrating the beautiful game</div>
+                                        <div class="discover-stats">845 members • 8 posts today</div>
+                                    </div>
+                                    <button class="discover-join-btn">Join</button>
+                                </div>
+                                <div class="discover-item">
+                                    <div class="discover-badge" style="background: linear-gradient(135deg, #34C759 0%, #30D158 100%);"></div>
+                                    <div class="discover-info">
+                                        <div class="discover-name">Grassroots Football</div>
+                                        <div class="discover-desc">Supporting local clubs and communities</div>
+                                        <div class="discover-stats">1.5K members • 5 posts today</div>
+                                    </div>
+                                    <button class="discover-join-btn">Join</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="screen-label">Squads</div>
+            </div>
+
+            <div>
+                <div class="phone-mockup">
+                    <div class="phone-screen">
+                        <div class="news-screen">
+                            <div class="news-header">
+                                <h1 class="squads-title">News</h1>
+                                <div style="display: flex; gap: 12px;">
+                                    <div class="icon-btn">🔖</div>
+                                    <div class="icon-btn">⚙️</div>
+                                </div>
+                            </div>
+
+                            <div class="categories-scroll">
+                                <div class="category-chip active">All</div>
+                                <div class="category-chip">Transfers</div>
+                                <div class="category-chip">Match Reports</div>
+                                <div class="category-chip">Interviews</div>
+                                <div class="category-chip">Analysis</div>
+                            </div>
+
+                            <div class="featured-article">
+                                <span class="article-category">Transfer News</span>
+                                <h2 class="article-headline">Breaking: Liverpool sign midfielder in record deal</h2>
+                                <div class="article-meta">
+                                    <span>Sky Sports</span>
+                                    <span>•</span>
+                                    <span>2h ago</span>
+                                    <span>•</span>
+                                    <span>5 min read</span>
+                                </div>
+                            </div>
+
+                            <div class="article-list">
+                                <div class="article-item">
+                                    <div class="article-thumb"></div>
+                                    <div class="article-content">
+                                        <span class="article-category" style="font-size: 11px;">Match Report</span>
+                                        <h3 class="article-title">City dominate in 4-1 victory over United</h3>
+                                        <div class="article-meta">
+                                            <span>BBC Sport</span>
+                                            <span>•</span>
+                                            <span>5h ago</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="article-item">
+                                    <div class="article-thumb"></div>
+                                    <div class="article-content">
+                                        <span class="article-category" style="font-size: 11px;">Analysis</span>
+                                        <h3 class="article-title">Tactical breakdown: How Arsenal's press is evolving</h3>
+                                        <div class="article-meta">
+                                            <span>The Athletic</span>
+                                            <span>•</span>
+                                            <span>8h ago</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="article-item">
+                                    <div class="article-thumb"></div>
+                                    <div class="article-content">
+                                        <span class="article-category" style="font-size: 11px;">Interview</span>
+                                        <h3 class="article-title">Exclusive: Manager discusses title race pressure</h3>
+                                        <div class="article-meta">
+                                            <span>ESPN</span>
+                                            <span>•</span>
+                                            <span>12h ago</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="screen-label">News</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showScreen(section) {
+            // Hide all sections
+            document.getElementById('onboarding').style.display = 'none';
+            document.getElementById('main').style.display = 'none';
+            document.getElementById('profile').style.display = 'none';
+            document.getElementById('features').style.display = 'none';
+
+            // Show selected section
+            document.getElementById(section).style.display = 'grid';
+
+            // Update active button
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+    </script>
+</body>
+</html>
