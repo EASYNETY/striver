@@ -6,6 +6,14 @@ import { db } from '../../api/firebase';
 import userService from '../../api/userService';
 import { logEvent, EVENTS } from '../../utils/analytics';
 
+let launchCamera: any;
+try {
+    const picker = require('react-native-image-picker');
+    launchCamera = picker.launchCamera;
+} catch (e) {
+    console.log('Image picker not found');
+}
+
 const VerifyAgeScreen = ({ navigation, route }: any) => {
     const { uid, accountType: initialAccountType } = route.params || {};
     const [accountType, setAccountType] = useState(initialAccountType);
@@ -54,8 +62,12 @@ const VerifyAgeScreen = ({ navigation, route }: any) => {
         }
 
         // Use Image Picker to take a selfie
-        const picker = require('react-native-image-picker');
-        const result = await picker.launchCamera({
+        if (!launchCamera) {
+            Alert.alert("Error", "Camera library is not available.");
+            return;
+        }
+
+        const result = await launchCamera({
             mediaType: 'photo',
             cameraType: 'front',
             quality: 0.8

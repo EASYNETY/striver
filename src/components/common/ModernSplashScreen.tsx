@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Dimensions, Image, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, Animated, Dimensions, StatusBar } from 'react-native';
+import { Trophy } from 'lucide-react-native';
 import { COLORS } from '../../constants/theme';
 
 const { width, height } = Dimensions.get('window');
@@ -10,6 +11,7 @@ const ModernSplashScreen = () => {
     const rotateAnim = useRef(new Animated.Value(0)).current;
     const circle1Scale = useRef(new Animated.Value(0)).current;
     const circle2Scale = useRef(new Animated.Value(0)).current;
+    const loadingAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
         // Main logo animations
@@ -65,11 +67,23 @@ const ModernSplashScreen = () => {
                 ])
             ).start();
         }, 1000);
+
+        // Loading bar animation
+        Animated.timing(loadingAnim, {
+            toValue: 1,
+            duration: 2000,
+            useNativeDriver: false, // width can't be animated with native driver
+        }).start();
     }, []);
 
     const spin = rotateAnim.interpolate({
         inputRange: [0, 1],
         outputRange: ['0deg', '360deg'],
+    });
+
+    const loadingWidth = loadingAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: ['0%', '100%'],
     });
 
     return (
@@ -93,15 +107,9 @@ const ModernSplashScreen = () => {
                     transform: [{ scale: scaleAnim }]
                 }
             ]}>
-                {/* We'll use a placeholder or the generated logo if we could, 
-                    but for now a stylized S/Football combo matches the prompt */}
                 <View style={styles.logoCircle}>
                     <Animated.View style={{ transform: [{ rotate: spin }] }}>
-                        <Image
-                            source={require('../../assets/images/striver_logo.png')}
-                            style={styles.logoImage}
-                            resizeMode="contain"
-                        />
+                        <Trophy color={COLORS.primary} size={80} />
                     </Animated.View>
                 </View>
 
@@ -112,7 +120,7 @@ const ModernSplashScreen = () => {
             <View style={styles.footer}>
                 <Text style={styles.footerText}>BE THE BEST</Text>
                 <View style={styles.loadingBarContainer}>
-                    <Animated.View style={styles.loadingBar} />
+                    <Animated.View style={[styles.loadingBar, { width: loadingWidth }]} />
                 </View>
             </View>
         </View>
@@ -147,10 +155,6 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(143, 251, 185, 0.2)',
     },
-    logoImage: {
-        width: 100,
-        height: 100,
-    },
     appName: {
         fontSize: 42,
         fontWeight: '900',
@@ -184,7 +188,6 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
     },
     loadingBar: {
-        width: '100%',
         height: '100%',
         backgroundColor: COLORS.primary,
     },
