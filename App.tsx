@@ -19,6 +19,12 @@ const App = () => {
     const [user, setUser] = useState<any>(null);
     const [isOnboarding, setIsOnboarding] = useState(false);
     const [loadingProfile, setLoadingProfile] = useState(false);
+    const [splashMinReady, setSplashMinReady] = useState(false);
+
+    useEffect(() => {
+        // Minimum time for splash to show its beautiful animations
+        setTimeout(() => setSplashMinReady(true), 2500);
+    }, []);
 
     useEffect(() => {
         // Initialize Facebook SDK
@@ -59,7 +65,7 @@ const App = () => {
         };
     }, []);
 
-    if (initializing || loadingProfile) return <ModernSplashScreen />;
+    if (initializing || loadingProfile || !splashMinReady) return <ModernSplashScreen />;
 
     return (
         <SafeAreaProvider>

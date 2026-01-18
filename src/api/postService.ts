@@ -91,7 +91,7 @@ class PostService {
     async getFeedPosts(limit: number = 20): Promise<Post[]> {
         const snapshot = await this.postsCollection
             .where('status', '==', 'active')
-            .limit(limit)
+            .limit(limit * 2) // Fetch a bit more for memory sorting
             .get();
 
         const posts = snapshot.docs.map(doc => ({
@@ -100,10 +100,10 @@ class PostService {
         })) as Post[];
 
         return posts.sort((a, b) => {
-            const timeA = (a.createdAt as any)?.toMillis?.() || (a.createdAt as any)?.getTime?.() || 0;
-            const timeB = (b.createdAt as any)?.toMillis?.() || (b.createdAt as any)?.getTime?.() || 0;
+            const timeA = (a.createdAt as any)?.seconds || 0;
+            const timeB = (b.createdAt as any)?.seconds || 0;
             return timeB - timeA;
-        });
+        }).slice(0, limit);
     }
 
     // Get following feed (posts from users you follow)
@@ -111,7 +111,6 @@ class PostService {
         const currentUser = firebaseAuth.currentUser;
         if (!currentUser) return [];
 
-        // Get list of users current user follows
         const followingSnapshot = await db
             .collection('following')
             .where('followerId', '==', currentUser.uid)
@@ -121,16 +120,25 @@ class PostService {
 
         if (followingIds.length === 0) return [];
 
+        // Chunking the followingIds for Firestore 'in' limit
+        const chunk = followingIds.slice(0, 10);
+
         const snapshot = await this.postsCollection
-            .where('userId', 'in', followingIds)
-            .orderBy('createdAt', 'desc')
-            .limit(limit)
+            .where('userId', 'in', chunk)
+            .where('status', '==', 'active')
+            .limit(limit * 2)
             .get();
 
-        return snapshot.docs.map(doc => ({
+        const posts = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data(),
         })) as Post[];
+
+        return posts.sort((a, b) => {
+            const timeA = (a.createdAt as any)?.seconds || 0;
+            const timeB = (b.createdAt as any)?.seconds || 0;
+            return timeB - timeA;
+        }).slice(0, limit);
     }
 
     // Get posts for a specific squad
@@ -146,8 +154,8 @@ class PostService {
         })) as Post[];
 
         return posts.sort((a, b) => {
-            const timeA = (a.createdAt as any)?.toMillis?.() || (a.createdAt as any)?.getTime?.() || 0;
-            const timeB = (b.createdAt as any)?.toMillis?.() || (b.createdAt as any)?.getTime?.() || 0;
+            const timeA = (a.createdAt as any)?.seconds || 0;
+            const timeB = (b.createdAt as any)?.seconds || 0;
             return timeB - timeA;
         });
     }
@@ -164,8 +172,8 @@ class PostService {
         })) as Post[];
 
         return posts.sort((a, b) => {
-            const timeA = (a.createdAt as any)?.toMillis?.() || (a.createdAt as any)?.getTime?.() || 0;
-            const timeB = (b.createdAt as any)?.toMillis?.() || (b.createdAt as any)?.getTime?.() || 0;
+            const timeA = (a.createdAt as any)?.seconds || 0;
+            const timeB = (b.createdAt as any)?.seconds || 0;
             return timeB - timeA;
         });
     }
@@ -253,8 +261,8 @@ class PostService {
         })) as Comment[];
 
         return comments.sort((a, b) => {
-            const timeA = (a.createdAt as any)?.toMillis?.() || (a.createdAt as any)?.getTime?.() || 0;
-            const timeB = (b.createdAt as any)?.toMillis?.() || (b.createdAt as any)?.getTime?.() || 0;
+            const timeA = (a.createdAt as any)?.seconds || 0;
+            const timeB = (b.createdAt as any)?.seconds || 0;
             return timeB - timeA;
         });
     }
@@ -298,15 +306,23 @@ class PostService {
     subscribeToFeedPosts(callback: (posts: Post[]) => void, limit: number = 20): () => void {
         return this.postsCollection
             .where('status', '==', 'active')
-            .orderBy('createdAt', 'desc')
-            .limit(limit)
+            // Removed orderBy('createdAt', 'desc') to solve index error
+            .limit(limit * 2)
             .onSnapshot(snapshot => {
                 if (!snapshot) return;
                 const posts = snapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data(),
                 })) as Post[];
-                callback(posts);
+
+                // Manual sort to bypass composite index requirement
+                const sorted = posts.sort((a, b) => {
+                    const timeA = (a.createdAt as any)?.seconds || 0;
+                    const timeB = (b.createdAt as any)?.seconds || 0;
+                    return timeB - timeA;
+                });
+
+                callback(sorted.slice(0, limit));
             }, error => {
                 console.error("Feed error:", error);
             });
@@ -342,7 +358,7 @@ class PostService {
                 const unsubscribe = this.postsCollection
                     .where('userId', 'in', chunks[0])
                     .where('status', '==', 'active')
-                    .orderBy('createdAt', 'desc')
+                    // Removed orderBy to avoid index error
                     .limit(limit)
                     .onSnapshot(postSnapshot => {
                         if (!postSnapshot) return;
@@ -350,7 +366,14 @@ class PostService {
                             id: doc.id,
                             ...doc.data(),
                         })) as Post[];
-                        callback(posts);
+
+                        const sorted = posts.sort((a, b) => {
+                            const timeA = (a.createdAt as any)?.seconds || 0;
+                            const timeB = (b.createdAt as any)?.seconds || 0;
+                            return timeB - timeA;
+                        });
+
+                        callback(sorted);
                     }, error => {
                         console.error("Following posts error:", error);
                     });

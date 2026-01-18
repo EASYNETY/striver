@@ -107,6 +107,14 @@ const SignUpScreen = ({ navigation, route }: any) => {
                 <Text style={styles.headerTitle}>{mode === 'signup' ? 'Create Account' : 'Welcome Back'}</Text>
             </View>
 
+            <View style={styles.brandContainer}>
+                <Image
+                    source={require('../../../assets/images/icon.png')}
+                    style={styles.brandIcon}
+                    resizeMode="contain"
+                />
+            </View>
+
             <View style={styles.content}>
                 <View style={styles.tabContainer}>
                     <TouchableOpacity
@@ -357,6 +365,14 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.1)',
+    },
+    brandContainer: {
+        alignItems: 'center',
+        marginVertical: SPACING.md,
+    },
+    brandIcon: {
+        width: 80,
+        height: 80,
     }
 });
 

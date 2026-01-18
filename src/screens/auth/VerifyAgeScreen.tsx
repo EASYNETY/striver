@@ -1,18 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ActivityIndicator, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ActivityIndicator, Alert, Image, Platform, PermissionsAndroid } from 'react-native';
 import { COLORS, SPACING } from '../../constants/theme';
 import { ChevronLeft, Camera, ShieldCheck, CheckCircle2 } from 'lucide-react-native';
 import { db } from '../../api/firebase';
 import userService from '../../api/userService';
 import { logEvent, EVENTS } from '../../utils/analytics';
 
-let launchCamera: any;
-try {
-    const picker = require('react-native-image-picker');
-    launchCamera = picker.launchCamera;
-} catch (e) {
-    console.log('Image picker not found');
-}
+import { launchCamera } from 'react-native-image-picker';
 
 const VerifyAgeScreen = ({ navigation, route }: any) => {
     const { uid, accountType: initialAccountType } = route.params || {};
@@ -52,6 +46,28 @@ const VerifyAgeScreen = ({ navigation, route }: any) => {
         { id: 3, label: 'Account Activation', status: 'pending' },
     ]);
 
+    const requestCameraPermission = async () => {
+        if (Platform.OS === 'android') {
+            try {
+                const granted = await PermissionsAndroid.request(
+                    PermissionsAndroid.PERMISSIONS.CAMERA,
+                    {
+                        title: "Striver Camera Permission",
+                        message: "Striver needs access to your camera for identity verification.",
+                        buttonNeutral: "Ask Me Later",
+                        buttonNegative: "Cancel",
+                        buttonPositive: "OK"
+                    }
+                );
+                return granted === PermissionsAndroid.RESULTS.GRANTED;
+            } catch (err) {
+                console.warn(err);
+                return false;
+            }
+        }
+        return true;
+    };
+
     const startVerification = async () => {
         if (ageError) {
             Alert.alert(
@@ -61,28 +77,41 @@ const VerifyAgeScreen = ({ navigation, route }: any) => {
             return;
         }
 
-        // Use Image Picker to take a selfie
-        if (!launchCamera) {
-            Alert.alert("Error", "Camera library is not available.");
+        const hasPermission = await requestCameraPermission();
+        if (!hasPermission) {
+            Alert.alert("Permission Denied", "Camera permission is required for verification.");
             return;
         }
 
-        const result = await launchCamera({
-            mediaType: 'photo',
-            cameraType: 'front',
-            quality: 0.8
-        });
+        // Use Image Picker to take a selfie
+        try {
+            const result = await launchCamera({
+                mediaType: 'photo',
+                cameraType: 'front',
+                quality: 0.8,
+                saveToPhotos: false
+            });
 
-        if (result.assets && result.assets[0].uri) {
-            setPhotoUri(result.assets[0].uri);
-            setVerifying(true);
-            // Simulate AI analysis
-            setTimeout(() => {
-                setVerifying(false);
-                setVerified(true);
-                setSteps(prev => prev.map(s => s.id === 2 ? { ...s, status: 'completed' } : s));
-                logEvent(EVENTS.MODERATION_APPROVED, { type: 'age_verification' });
-            }, 3000);
+            if (result.didCancel) return;
+            if (result.errorCode) {
+                Alert.alert("Camera Error", result.errorMessage || "An unknown error occurred.");
+                return;
+            }
+
+            if (result.assets && result.assets[0].uri) {
+                setPhotoUri(result.assets[0].uri);
+                setVerifying(true);
+                // Simulate AI analysis
+                setTimeout(() => {
+                    setVerifying(false);
+                    setVerified(true);
+                    setSteps(prev => prev.map(s => s.id === 2 ? { ...s, status: 'completed' } : s));
+                    logEvent(EVENTS.MODERATION_APPROVED, { type: 'age_verification' });
+                }, 3000);
+            }
+        } catch (error) {
+            console.error("Camera Launch Error:", error);
+            Alert.alert("Error", "Could not open camera.");
         }
     };
 
@@ -107,6 +136,14 @@ const VerifyAgeScreen = ({ navigation, route }: any) => {
                     <ChevronLeft color={COLORS.white} size={28} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Age Verification</Text>
+            </View>
+
+            <View style={styles.brandContainer}>
+                <Image
+                    source={require('../../../assets/images/icon.png')}
+                    style={styles.brandIcon}
+                    resizeMode="contain"
+                />
             </View>
 
             <View style={styles.content}>
@@ -290,10 +327,18 @@ const styles = StyleSheet.create({
         marginTop: SPACING.lg,
     },
     primaryBtnText: {
-        fontSize: 18,
-        fontWeight: '700',
         color: COLORS.background,
+        fontSize: 18,
+        fontWeight: 'bold',
     },
+    brandContainer: {
+        alignItems: 'center',
+        marginVertical: 10,
+    },
+    brandIcon: {
+        width: 80,
+        height: 80,
+    }
 });
 
 export default VerifyAgeScreen;

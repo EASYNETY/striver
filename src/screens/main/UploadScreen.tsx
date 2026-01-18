@@ -1,24 +1,17 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, TextInput, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, TextInput, ScrollView, Alert, Platform, PermissionsAndroid } from 'react-native';
 import Video from 'react-native-video';
 import { COLORS, SPACING } from '../../constants/theme';
 import { ChevronLeft, Camera as CameraIcon, RefreshCw, Zap, Image as ImageIcon, PlayCircle } from 'lucide-react-native';
-// import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
-let launchImageLibrary: any;
-let launchCamera: any;
-try {
-    const picker = require('react-native-image-picker');
-    launchImageLibrary = picker.launchImageLibrary;
-    launchCamera = picker.launchCamera;
-} catch (e) {
-    console.log('Image picker not found');
-}
+import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 
 import postService from '../../api/postService';
+// ... rest of imports ...
 import rewardService from '../../api/rewardService';
 import userService from '../../api/userService';
 
 const UploadScreen = ({ navigation, route }: any) => {
+    // ... rest of state ...
     const { squadId } = route.params || {};
     const [title, setTitle] = useState('');
     const [tags, setTags] = useState('');
@@ -27,26 +20,48 @@ const UploadScreen = ({ navigation, route }: any) => {
     const [videoUri, setVideoUri] = useState<string | null>(null);
     const [cameraType, setCameraType] = useState<'back' | 'front'>('back');
 
-    const pickVideo = async () => {
-        if (!launchImageLibrary) {
-            Alert.alert("Configuration Error", "The video picker library is not installed.");
-            return;
+    const requestCameraPermission = async () => {
+        if (Platform.OS === 'android') {
+            try {
+                const granted = await PermissionsAndroid.request(
+                    PermissionsAndroid.PERMISSIONS.CAMERA,
+                    {
+                        title: "Striver Camera Permission",
+                        message: "Striver needs access to your camera to record your skills.",
+                        buttonNeutral: "Ask Me Later",
+                        buttonNegative: "Cancel",
+                        buttonPositive: "OK"
+                    }
+                );
+                return granted === PermissionsAndroid.RESULTS.GRANTED;
+            } catch (err) {
+                console.warn(err);
+                return false;
+            }
         }
+        return true;
+    };
+
+    const pickVideo = async () => {
         try {
             const result = await launchImageLibrary({ mediaType: 'video', selectionLimit: 1 });
+            if (result.didCancel) return;
             if (result.assets && result.assets.length > 0 && result.assets[0].uri) {
                 setVideoUri(result.assets[0].uri);
             }
         } catch (error) {
             console.error(error);
+            Alert.alert("Error", "Could not pick video");
         }
     };
 
     const recordVideo = async () => {
-        if (!launchCamera) {
-            Alert.alert("Configuration Error", "The camera library is not installed.");
+        const hasPermission = await requestCameraPermission();
+        if (!hasPermission) {
+            Alert.alert("Permission Required", "Camera access is needed to record video.");
             return;
         }
+
         try {
             const result = await launchCamera({
                 mediaType: 'video',
@@ -54,11 +69,19 @@ const UploadScreen = ({ navigation, route }: any) => {
                 durationLimit: 60,
                 cameraType: cameraType
             });
+
+            if (result.didCancel) return;
+            if (result.errorCode) {
+                Alert.alert("Camera Error", result.errorMessage || "Could not open camera.");
+                return;
+            }
+
             if (result.assets && result.assets.length > 0 && result.assets[0].uri) {
                 setVideoUri(result.assets[0].uri);
             }
         } catch (error) {
             console.error(error);
+            Alert.alert("Error", "Could not launch camera.");
         }
     };
 

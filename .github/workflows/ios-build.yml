@@ -2,6 +2,8 @@ name: Build iOS
 
 on:
   workflow_dispatch: # Allows manual trigger
+  push:
+    branches: [ main ]
 
 jobs:
   build:
@@ -20,6 +22,14 @@ jobs:
       - name: Install NPM Dependencies
         run: npm install
 
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: ios/Pods
+          key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pods-
+
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
@@ -29,6 +39,10 @@ jobs:
       - name: Patch Boost Podspec (Fix 404)
         run: |
           sed -i '' 's|https://boostorg.jfrog.io/artifactory/main/release/1.83.0/source/boost_1_83_0.tar.bz2|https://archives.boost.io/release/1.83.0/source/boost_1_83_0.tar.bz2|g' node_modules/react-native/third-party-podspecs/boost.podspec
+
+      - name: Patch Firebase Auth (Fix setLinkDomain)
+        run: |
+          sed -i '' 's/\[settings setLinkDomain:linkDomain\];/\/\/ [settings setLinkDomain:linkDomain];/g' node_modules/@react-native-firebase/auth/ios/RNFBAuth/RNFBAuthModule.m
 
       - name: Install CocoaPods
         run: |
