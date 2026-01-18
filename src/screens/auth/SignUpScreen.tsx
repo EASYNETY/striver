@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, SafeAreaView, Alert, ActivityIndicator, Image, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { firebaseAuth } from '../../api/firebase';
 import userService from '../../api/userService';
 import authService from '../../api/authService';
@@ -15,6 +16,7 @@ const GoogleIcon = ({ size = 24 }: { size?: number }) => (
 );
 
 const SignUpScreen = ({ navigation, route }: any) => {
+    const insets = useSafeAreaInsets();
     const { accountType = 'individual' } = route.params || {};
     const [mode, setMode] = useState<'signup' | 'login'>('signup');
     const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email');
@@ -100,8 +102,8 @@ const SignUpScreen = ({ navigation, route }: any) => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()}>
+            <View style={[styles.header, { paddingTop: Platform.OS === 'android' ? insets.top + 10 : 10 }]}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
                     <ChevronLeft color={COLORS.white} size={28} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>{mode === 'signup' ? 'Create Account' : 'Welcome Back'}</Text>
@@ -240,7 +242,12 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: SPACING.md,
+        paddingHorizontal: SPACING.md,
+        paddingBottom: SPACING.sm,
+        backgroundColor: COLORS.background,
+    },
+    backBtn: {
+        padding: 5,
     },
     headerTitle: {
         fontSize: 20,
@@ -373,6 +380,9 @@ const styles = StyleSheet.create({
     brandIcon: {
         width: 80,
         height: 80,
+        borderRadius: 40,
+        borderWidth: 2,
+        borderColor: 'rgba(143, 251, 185, 0.3)',
     }
 });
 

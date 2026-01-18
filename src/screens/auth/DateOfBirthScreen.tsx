@@ -103,15 +103,21 @@ const DateOfBirthScreen = ({ navigation, route }: any) => {
                         placeholderTextColor={COLORS.textSecondary}
                         value={dob}
                         onChangeText={(text) => {
-                            // Only allow numbers
+                            // Remove all non-numeric characters
                             const cleaned = text.replace(/[^0-9]/g, '');
-                            let formatted = cleaned;
-                            if (cleaned.length > 2) {
-                                formatted = cleaned.slice(0, 2) + '/' + cleaned.slice(2);
+
+                            // Auto-format with slashes
+                            let formatted = '';
+                            if (cleaned.length > 0) {
+                                formatted = cleaned.substring(0, 2);
                             }
-                            if (cleaned.length > 4) {
-                                formatted = cleaned.slice(0, 2) + '/' + cleaned.slice(2, 4) + '/' + cleaned.slice(4, 8);
+                            if (cleaned.length >= 3) {
+                                formatted += '/' + cleaned.substring(2, 4);
                             }
+                            if (cleaned.length >= 5) {
+                                formatted += '/' + cleaned.substring(4, 8);
+                            }
+
                             setDob(formatted);
                         }}
                         keyboardType="number-pad"

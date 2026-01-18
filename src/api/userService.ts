@@ -193,6 +193,15 @@ class UserService {
         return url;
     }
 
+    // Upload verification photo for age verification
+    async uploadVerificationPhoto(uid: string, fileUri: string): Promise<string> {
+        const timestamp = Date.now();
+        const reference = firebaseStorage.ref(`verification_photos/${uid}_${timestamp}.jpg`);
+        await reference.putFile(fileUri);
+        const url = await reference.getDownloadURL();
+        return url;
+    }
+
     // Update user's reward tier based on activity/coins (example logic)
     async updateRewardTier(userId: string): Promise<void> {
         const userProfile = await this.getUserProfile(userId);

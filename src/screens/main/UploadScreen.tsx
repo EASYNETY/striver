@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, TextInput, ScrollView, Alert, Platform, PermissionsAndroid } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Video from 'react-native-video';
 import { COLORS, SPACING } from '../../constants/theme';
 import { ChevronLeft, Camera as CameraIcon, RefreshCw, Zap, Image as ImageIcon, PlayCircle } from 'lucide-react-native';
@@ -11,7 +12,7 @@ import rewardService from '../../api/rewardService';
 import userService from '../../api/userService';
 
 const UploadScreen = ({ navigation, route }: any) => {
-    // ... rest of state ...
+    const insets = useSafeAreaInsets();
     const { squadId } = route.params || {};
     const [title, setTitle] = useState('');
     const [tags, setTags] = useState('');
@@ -154,10 +155,10 @@ const UploadScreen = ({ navigation, route }: any) => {
                     )}
                 </View>
 
-                {/* Top Controls */}
-                <View style={styles.topControls}>
-                    <TouchableOpacity onPress={() => navigation.goBack()}>
-                        <ChevronLeft color={COLORS.white} size={32} />
+                {/* View Overlay Controls */}
+                <View style={[styles.topControls, { top: Platform.OS === 'ios' ? insets.top : insets.top + 10 }]}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
+                        <ChevronLeft color={COLORS.white} size={28} />
                     </TouchableOpacity>
                     <View style={styles.rightControls}>
                         <TouchableOpacity onPress={toggleCamera}>
@@ -263,11 +264,19 @@ const styles = StyleSheet.create({
     },
     topControls: {
         position: 'absolute',
-        top: 20,
         left: 16,
         right: 16,
         flexDirection: 'row',
         justifyContent: 'space-between',
+        zIndex: 10,
+    },
+    iconBtn: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(0,0,0,0.3)',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     rightControls: {
         gap: 20,

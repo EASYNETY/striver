@@ -38,6 +38,7 @@ export const EVENTS = {
     SQUAD_JOINED: 'squad_joined',
     REWARD_EARNED: 'reward_earned',
     REWARD_SPENT: 'reward_spent',
+    MODERATION_SUBMITTED: 'moderation_submitted',
     MODERATION_APPROVED: 'moderation_approved',
     MODERATION_REJECTED: 'moderation_rejected',
     PAYMENT_STARTED: 'payment_started',

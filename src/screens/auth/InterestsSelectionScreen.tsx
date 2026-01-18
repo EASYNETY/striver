@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, Image, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, Image, ActivityIndicator, TextInput, Alert } from 'react-native';
 import { COLORS, SPACING } from '../../constants/theme';
-import { CheckCircle2, Search, ArrowRight } from 'lucide-react-native';
+import { CheckCircle2, Search, ArrowRight, Plus } from 'lucide-react-native';
 import userService from '../../api/userService';
 import { logEvent, EVENTS } from '../../utils/analytics';
 
@@ -15,6 +15,10 @@ const PLAYERS = [
     { id: '2', name: 'L. Messi', team: 'Inter Miami', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=messi' },
     { id: '3', name: 'K. Mbappe', team: 'Real Madrid', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=mbappe' },
     { id: '4', name: 'E. Haaland', team: 'Man City', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=haaland' },
+    { id: '5', name: 'C. Ronaldo', team: 'Al Nassr', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=ronaldo' },
+    { id: '6', name: 'N. Williams', team: 'Athletic Bilbao', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=nico' },
+    { id: '7', name: 'J. Bellingham', team: 'Real Madrid', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=bellingham' },
+    { id: '8', name: 'P. Foden', team: 'Man City', image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=foden' },
 ];
 
 const InterestsSelectionScreen = ({ navigation, route }: any) => {
@@ -22,6 +26,8 @@ const InterestsSelectionScreen = ({ navigation, route }: any) => {
     const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
     const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [customIdols, setCustomIdols] = useState<Array<{ id: string, name: string, team: string, image?: string }>>([]);
 
     const toggleInterest = (interest: string) => {
         setSelectedInterests(prev =>
@@ -34,6 +40,31 @@ const InterestsSelectionScreen = ({ navigation, route }: any) => {
             prev.includes(playerId) ? prev.filter(i => i !== playerId) : [...prev, playerId]
         );
     };
+
+    const addCustomIdol = () => {
+        if (!searchQuery.trim()) {
+            Alert.alert("Enter a Name", "Please type your idol's name to add them.");
+            return;
+        }
+
+        const customId = `custom_${Date.now()}`;
+        const newIdol = {
+            id: customId,
+            name: searchQuery.trim(),
+            team: 'Custom',
+        };
+
+        setCustomIdols(prev => [...prev, newIdol]);
+        setSelectedPlayers(prev => [...prev, customId]);
+        setSearchQuery('');
+
+        Alert.alert("Added!", `${newIdol.name} has been added to your idols!`);
+    };
+
+    const filteredPlayers = [...PLAYERS, ...customIdols].filter(player =>
+        player.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        player.team.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
     const handleFinish = async () => {
         setLoading(true);
@@ -77,16 +108,46 @@ const InterestsSelectionScreen = ({ navigation, route }: any) => {
                 </View>
 
                 <Text style={styles.sectionTitle}>Follow Your Idols</Text>
+
+                {/* Search Input */}
+                <View style={styles.searchContainer}>
+                    <Search color={COLORS.textSecondary} size={20} />
+                    <TextInput
+                        style={styles.searchInput}
+                        placeholder="Search or add your idol..."
+                        placeholderTextColor={COLORS.textSecondary}
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                    />
+                    {searchQuery.length > 0 && filteredPlayers.length === 0 && (
+                        <TouchableOpacity onPress={addCustomIdol} style={styles.addButton}>
+                            <Plus color={COLORS.primary} size={20} />
+                        </TouchableOpacity>
+                    )}
+                </View>
+
+                {/* Show "Add Custom" hint */}
+                {searchQuery.length > 0 && filteredPlayers.length === 0 && (
+                    <TouchableOpacity onPress={addCustomIdol} style={styles.customHint}>
+                        <Plus color={COLORS.primary} size={16} />
+                        <Text style={styles.customHintText}>Add "{searchQuery}" as custom idol</Text>
+                    </TouchableOpacity>
+                )}
+
                 <View style={styles.playersList}>
-                    {PLAYERS.map(player => {
+                    {filteredPlayers.map(player => {
                         const isSelected = selectedPlayers.includes(player.id);
+                        const isCustom = player.id.startsWith('custom_');
                         return (
                             <TouchableOpacity
                                 key={player.id}
                                 style={[styles.playerCard, isSelected && styles.playerCardSelected]}
                                 onPress={() => togglePlayer(player.id)}
                             >
-                                <Image source={{ uri: player.image }} style={styles.playerImage} />
+                                <Image
+                                    source={{ uri: isCustom ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${player.name}` : player.image }}
+                                    style={styles.playerImage}
+                                />
                                 <View style={styles.playerInfo}>
                                     <Text style={styles.playerName}>{player.name}</Text>
                                     <Text style={styles.playerTeam}>{player.team}</Text>
@@ -177,6 +238,47 @@ const styles = StyleSheet.create({
     },
     interestTextSelected: {
         color: COLORS.background,
+    },
+    searchContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: COLORS.surface,
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.05)',
+        gap: 8,
+    },
+    searchInput: {
+        flex: 1,
+        color: COLORS.white,
+        fontSize: 14,
+    },
+    addButton: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: 'rgba(143, 251, 185, 0.1)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    customHint: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 12,
+        backgroundColor: 'rgba(143, 251, 185, 0.05)',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(143, 251, 185, 0.2)',
+        marginBottom: 12,
+        gap: 8,
+    },
+    customHintText: {
+        color: COLORS.primary,
+        fontSize: 14,
+        fontWeight: '600',
     },
     playersList: {
         gap: 10,

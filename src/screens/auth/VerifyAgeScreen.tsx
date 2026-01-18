@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ActivityIndicator, Alert, Image, Platform, PermissionsAndroid } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ActivityIndicator, Alert, Image, Platform, PermissionsAndroid, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, SPACING } from '../../constants/theme';
 import { ChevronLeft, Camera, ShieldCheck, CheckCircle2 } from 'lucide-react-native';
 import { db } from '../../api/firebase';
@@ -9,6 +10,7 @@ import { logEvent, EVENTS } from '../../utils/analytics';
 import { launchCamera } from 'react-native-image-picker';
 
 const VerifyAgeScreen = ({ navigation, route }: any) => {
+    const insets = useSafeAreaInsets();
     const { uid, accountType: initialAccountType } = route.params || {};
     const [accountType, setAccountType] = useState(initialAccountType);
     const [verifying, setVerifying] = useState(false);
@@ -101,13 +103,53 @@ const VerifyAgeScreen = ({ navigation, route }: any) => {
             if (result.assets && result.assets[0].uri) {
                 setPhotoUri(result.assets[0].uri);
                 setVerifying(true);
-                // Simulate AI analysis
-                setTimeout(() => {
+
+                try {
+                    // Upload photo to Firebase Storage for manual review
+                    const photoUrl = await userService.uploadVerificationPhoto(uid, result.assets[0].uri);
+
+                    // Create verification request in Firestore
+                    await db.collection('verificationRequests').add({
+                        userId: uid,
+                        photoUrl: photoUrl,
+                        userAge: userAge,
+                        accountType: accountType,
+                        status: 'pending',
+                        createdAt: new Date(),
+                        reviewedAt: null,
+                        reviewedBy: null
+                    });
+
+                    // Update user profile to show verification is pending
+                    await userService.updateUserProfile(uid, {
+                        verificationStatus: 'pending',
+                        verificationPhotoUrl: photoUrl
+                    });
+
                     setVerifying(false);
-                    setVerified(true);
-                    setSteps(prev => prev.map(s => s.id === 2 ? { ...s, status: 'completed' } : s));
-                    logEvent(EVENTS.MODERATION_APPROVED, { type: 'age_verification' });
-                }, 3000);
+
+                    // Show success message but NOT verified yet
+                    Alert.alert(
+                        "Verification Submitted",
+                        "Your photo has been submitted for review. Our team will verify your age within 24-48 hours. You'll receive a notification once approved.",
+                        [
+                            {
+                                text: "Continue",
+                                onPress: () => {
+                                    logEvent(EVENTS.MODERATION_SUBMITTED, { type: 'age_verification' });
+                                    navigation.navigate('InterestsSelection', { uid });
+                                }
+                            }
+                        ]
+                    );
+                } catch (uploadError) {
+                    console.error("Upload Error:", uploadError);
+                    setVerifying(false);
+                    Alert.alert(
+                        "Upload Failed",
+                        "Could not submit verification photo. Please check your internet connection and try again."
+                    );
+                }
             }
         } catch (error) {
             console.error("Camera Launch Error:", error);
@@ -131,102 +173,113 @@ const VerifyAgeScreen = ({ navigation, route }: any) => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()}>
+            <View style={[styles.header, { paddingTop: Platform.OS === 'android' ? insets.top + 10 : 10 }]}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
                     <ChevronLeft color={COLORS.white} size={28} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Age Verification</Text>
             </View>
 
-            <View style={styles.brandContainer}>
-                <Image
-                    source={require('../../../assets/images/icon.png')}
-                    style={styles.brandIcon}
-                    resizeMode="contain"
-                />
-            </View>
-
-            <View style={styles.content}>
-                {!verified ? (
-                    <View style={styles.scanContainer}>
-                        <View style={styles.faceFrame}>
-                            {photoUri ? (
-                                <Image source={{ uri: photoUri }} style={[styles.faceFrame, { marginBottom: 0 }]} />
-                            ) : verifying ? (
-                                <ActivityIndicator size="large" color={COLORS.primary} />
-                            ) : (
-                                <Camera color={COLORS.textSecondary} size={48} />
-                            )}
-                        </View>
-                        {ageError ? (
-                            <>
-                                <Text style={[styles.instructionTitle, { color: COLORS.error || '#FF3B30' }]}>Verification Restricted</Text>
-                                <Text style={styles.instructionDesc}>
-                                    Striver Identity Verification is strictly for users 18+.
-                                    Younger users are protected by our automated safety guardrails.
-                                </Text>
-                            </>
-                        ) : (
-                            <>
-                                <Text style={styles.instructionTitle}>Position your face</Text>
-                                <Text style={styles.instructionDesc}>
-                                    We use secure facial analysis to verify your age and keep the community safe.
-                                    Only real humans are allowed on Striver.
-                                </Text>
-                            </>
-                        )}
-                    </View>
-                ) : (
-                    <View style={styles.successContainer}>
-                        <View style={styles.successIconBox}>
-                            <ShieldCheck color={COLORS.primary} size={64} />
-                        </View>
-                        <Text style={styles.instructionTitle}>Verification Successful!</Text>
-                        <Text style={styles.instructionDesc}>
-                            You have been verified. Welcome to the Striver squad.
-                        </Text>
-                    </View>
-                )}
-
-                <View style={styles.stepsContainer}>
-                    {steps.map(step => (
-                        <View key={step.id} style={styles.stepItem}>
-                            <View style={[
-                                styles.stepDot,
-                                step.status === 'completed' && { backgroundColor: COLORS.primary }
-                            ]}>
-                                {step.status === 'completed' && <CheckCircle2 color={COLORS.background} size={14} />}
-                            </View>
-                            <Text style={[
-                                styles.stepLabel,
-                                step.status === 'completed' && { color: COLORS.white }
-                            ]}>{step.label}</Text>
-                        </View>
-                    ))}
+            <ScrollView
+                style={styles.scrollView}
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+            >
+                <View style={styles.brandContainer}>
+                    <Image
+                        source={require('../../../assets/images/icon.png')}
+                        style={styles.brandIcon}
+                        resizeMode="contain"
+                    />
                 </View>
 
-                {!verified ? (
-                    <TouchableOpacity
-                        style={[
-                            styles.primaryBtn,
-                            (verifying || ageError) && { opacity: 0.7, backgroundColor: ageError ? COLORS.surface : COLORS.primary }
-                        ]}
-                        onPress={startVerification}
-                        disabled={verifying || ageError}
-                    >
-                        <Text style={[styles.primaryBtnText, ageError && { color: COLORS.textSecondary }]}>
-                            {verifying ? 'Verifying...' : ageError ? 'Verification Locked' : 'Start Scan'}
-                        </Text>
-                    </TouchableOpacity>
-                ) : (
-                    <TouchableOpacity
-                        style={styles.primaryBtn}
-                        onPress={handleContinue}
-                    >
-                        <Text style={styles.primaryBtnText}>Continue</Text>
-                    </TouchableOpacity>
-                )}
-            </View>
+                <View style={styles.content}>
+                    {!verified ? (
+                        <View style={styles.scanContainer}>
+                            <TouchableOpacity
+                                style={styles.faceFrame}
+                                onPress={startVerification}
+                                activeOpacity={0.7}
+                            >
+                                {photoUri ? (
+                                    <Image source={{ uri: photoUri }} style={[styles.faceFrameImage]} />
+                                ) : verifying ? (
+                                    <ActivityIndicator size="large" color={COLORS.primary} />
+                                ) : (
+                                    <Camera color={COLORS.textSecondary} size={48} />
+                                )}
+                            </TouchableOpacity>
+                            {ageError ? (
+                                <>
+                                    <Text style={[styles.instructionTitle, { color: COLORS.error || '#FF3B30' }]}>Verification Restricted</Text>
+                                    <Text style={styles.instructionDesc}>
+                                        Striver Identity Verification is strictly for users 18+.
+                                        Younger users are protected by our automated safety guardrails.
+                                    </Text>
+                                </>
+                            ) : (
+                                <>
+                                    <Text style={styles.instructionTitle}>Position your face</Text>
+                                    <Text style={styles.instructionDesc}>
+                                        We use secure facial analysis to verify your age and keep the community safe.
+                                        Only real humans are allowed on Striver.
+                                    </Text>
+                                </>
+                            )}
+                        </View>
+                    ) : (
+                        <View style={styles.successContainer}>
+                            <View style={styles.successIconBox}>
+                                <ShieldCheck color={COLORS.primary} size={64} />
+                            </View>
+                            <Text style={styles.instructionTitle}>Verification Successful!</Text>
+                            <Text style={styles.instructionDesc}>
+                                You have been verified. Welcome to the Striver squad.
+                            </Text>
+                        </View>
+                    )}
+
+                    <View style={styles.stepsContainer}>
+                        {steps.map(step => (
+                            <View key={step.id} style={styles.stepItem}>
+                                <View style={[
+                                    styles.stepDot,
+                                    step.status === 'completed' && { backgroundColor: COLORS.primary }
+                                ]}>
+                                    {step.status === 'completed' && <CheckCircle2 color={COLORS.background} size={14} />}
+                                </View>
+                                <Text style={[
+                                    step.status === 'completed' ? styles.stepLabelActive : styles.stepLabel
+                                ]}>{step.label}</Text>
+                            </View>
+                        ))}
+                    </View>
+
+                    <View style={styles.footer}>
+                        {!verified ? (
+                            <TouchableOpacity
+                                style={[
+                                    styles.primaryBtn,
+                                    (verifying || ageError) && { opacity: 0.7, backgroundColor: ageError ? COLORS.surface : COLORS.primary }
+                                ]}
+                                onPress={startVerification}
+                                disabled={verifying || ageError}
+                            >
+                                <Text style={[styles.primaryBtnText, ageError && { color: COLORS.textSecondary }]}>
+                                    {verifying ? 'Verifying...' : ageError ? 'Verification Locked' : 'Start Scan'}
+                                </Text>
+                            </TouchableOpacity>
+                        ) : (
+                            <TouchableOpacity
+                                style={styles.primaryBtn}
+                                onPress={handleContinue}
+                            >
+                                <Text style={styles.primaryBtnText}>Continue</Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                </View>
+            </ScrollView>
         </SafeAreaView>
     );
 };
@@ -239,7 +292,13 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: SPACING.md,
+        paddingHorizontal: SPACING.md,
+        paddingBottom: SPACING.sm,
+        backgroundColor: COLORS.background,
+        zIndex: 100,
+    },
+    backBtn: {
+        padding: 5,
     },
     headerTitle: {
         fontSize: 18,
@@ -247,25 +306,36 @@ const styles = StyleSheet.create({
         color: COLORS.white,
         marginLeft: SPACING.sm,
     },
+    scrollView: {
+        flex: 1,
+    },
+    scrollContent: {
+        paddingBottom: 40,
+    },
     content: {
         flex: 1,
         padding: SPACING.lg,
-        justifyContent: 'space-between',
     },
     scanContainer: {
         alignItems: 'center',
         marginTop: 40,
     },
     faceFrame: {
-        width: 200,
-        height: 260,
-        borderRadius: 100,
+        width: 180,
+        height: 240,
+        borderRadius: 90,
         borderWidth: 2,
-        borderColor: 'rgba(255,255,255,0.1)',
+        borderColor: 'rgba(255,255,255,0.2)',
         borderStyle: 'dashed',
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: SPACING.xl,
+        overflow: 'hidden',
+    },
+    faceFrameImage: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 90,
     },
     successContainer: {
         alignItems: 'center',
@@ -318,6 +388,14 @@ const styles = StyleSheet.create({
         color: COLORS.textSecondary,
         fontWeight: '600',
     },
+    stepLabelActive: {
+        fontSize: 14,
+        color: COLORS.white,
+        fontWeight: '700',
+    },
+    footer: {
+        marginTop: SPACING.xl,
+    },
     primaryBtn: {
         height: 56,
         backgroundColor: COLORS.primary,
@@ -338,6 +416,9 @@ const styles = StyleSheet.create({
     brandIcon: {
         width: 80,
         height: 80,
+        borderRadius: 40,
+        borderWidth: 2,
+        borderColor: 'rgba(143, 251, 185, 0.3)',
     }
 });
 

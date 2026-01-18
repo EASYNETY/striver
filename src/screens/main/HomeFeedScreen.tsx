@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, FlatList, Dimensions, StatusBar, Text, TouchableOpacity, Image, Share, RefreshControl, Modal, SafeAreaView, TextInput } from 'react-native';
+import { View, StyleSheet, FlatList, Dimensions, StatusBar, Text, TouchableOpacity, Image, Share, RefreshControl, Modal, SafeAreaView, TextInput, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Video from 'react-native-video';
 import { COLORS, SPACING } from '../../constants/theme';
 import { Heart, MessageCircle, Share2, Search, Bell, Coins, ShieldCheck, X, UserPlus, UserCheck } from 'lucide-react-native';
@@ -13,6 +14,7 @@ import { shareContent } from '../../utils/deepLink';
 const { height: WINDOW_HEIGHT, width: WINDOW_WIDTH } = Dimensions.get('window');
 
 const HomeFeedScreen = () => {
+    const insets = useSafeAreaInsets();
     const navigation = useNavigation<any>();
     const isFocused = useIsFocused();
     const [activeTab, setActiveTab] = useState<'For You' | 'Following'>('For You');
@@ -257,13 +259,16 @@ const HomeFeedScreen = () => {
             <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
             {/* Top Navigation */}
-            <View style={styles.topNav}>
-                <View style={styles.logoBox}>
+            <View style={[styles.topNav, { top: Platform.OS === 'ios' ? insets.top : insets.top + 10 }]}>
+                <TouchableOpacity
+                    onPress={() => navigation.navigate('Profile')}
+                    style={styles.logoBox}
+                >
                     <Image
                         source={require('../../../assets/images/icon.png')}
                         style={{ width: 24, height: 24, resizeMode: 'contain' }}
                     />
-                </View>
+                </TouchableOpacity>
                 {!isChildMode ? (
                     <View style={styles.tabs}>
                         <TouchableOpacity onPress={() => setActiveTab('Following')}>
@@ -436,7 +441,6 @@ const styles = StyleSheet.create({
     },
     topNav: {
         position: 'absolute',
-        top: 50,
         left: 0,
         right: 0,
         flexDirection: 'row',
