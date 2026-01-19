@@ -58,7 +58,7 @@ jobs:
             -scheme HelloWorld \
             -configuration Release \
             -sdk iphonesimulator \
-            -destination 'platform=iOS Simulator,OS=latest'\
+            -destination 'generic/platform=iOS Simulator'
             -derivedDataPath ios/build \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
