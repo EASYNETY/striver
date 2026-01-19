@@ -9,7 +9,7 @@ jobs:
   build:
     name: Build iOS App
     runs-on: macos-latest
-    timeout-minutes: 25
+    timeout-minutes: 60
 
     steps:
       - name: Checkout Repository
@@ -53,17 +53,18 @@ jobs:
 
       - name: Build for iOS Simulator
         run: |
+          set -o pipefail
           xcodebuild \
             -workspace ios/HelloWorld.xcworkspace \
             -scheme HelloWorld \
             -configuration Release \
             -sdk iphonesimulator \
-            -destination 'generic/platform=iOS Simulator'
+            -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath ios/build \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
-            build
+            build | tee build.log
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
