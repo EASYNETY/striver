@@ -3,7 +3,13 @@
 #import <React/RCTBundleURLProvider.h>
 #import <AuthenticationServices/AuthenticationServices.h>
 #import <SafariServices/SafariServices.h>
+#if __has_include(<FBSDKCoreKit/ApplicationDelegate.h>)
+#import <FBSDKCoreKit/ApplicationDelegate.h>
 #import <FBSDKCoreKit/FBSDKCoreKit.h>
+#define FBSDK_AVAILABLE 1
+#else
+#define FBSDK_AVAILABLE 0
+#endif
 #import <Firebase.h>
 
 @implementation AppDelegate
@@ -11,13 +17,14 @@
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
   [FIRApp configure];
-  [[FBSDKApplicationDelegate sharedInstance] application:application
-                           didFinishLaunchingWithOptions:launchOptions];
+#if FBSDK_AVAILABLE
+  [[ApplicationDelegate shared] application:application didFinishLaunchingWithOptions:launchOptions];
+#endif
 
   self.moduleName = @"StriverApp";
   // You can add your custom initial props in the dictionary below.
   // They will be passed down to the ViewController used by React Native.
-  self.initialProps = @{};
+  self.initialProps = @{{}};
 
   return [super application:application didFinishLaunchingWithOptions:launchOptions];
 }
@@ -40,11 +47,11 @@
             openURL:(NSURL *)url
             options:(NSDictionary<UIApplicationOpenURLOptionsKey,id> *)options
 {
-  if ([[FBSDKApplicationDelegate sharedInstance] application:app
-                                                      openURL:url
-                                                      options:options]) {
+#if FBSDK_AVAILABLE
+  if ([[ApplicationDelegate shared] application:app openURL:url options:options]) {
     return YES;
   }
+#endif
 
   return NO;
 }
