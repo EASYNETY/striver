@@ -1,7 +1,7 @@
 name: Build iOS
 
 on:
-  workflow_dispatch: # Allows manual trigger
+  workflow_dispatch:
   push:
     branches: [ main ]
 
@@ -9,6 +9,8 @@ jobs:
   build:
     name: Build iOS App
     runs-on: macos-latest
+    timeout-minutes: 25
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -49,21 +51,22 @@ jobs:
           cd ios
           pod install --repo-update
 
-      - name: Build for Simulator
+      - name: Build for iOS Simulator
         run: |
-          xcodebuild -workspace ios/HelloWorld.xcworkspace \
-                     -scheme HelloWorld \
-                     -configuration Release \
-                     -sdk iphonesimulator \
-                     -derivedDataPath ios/build \
-                     CODE_SIGN_IDENTITY="" \
-                     CODE_SIGNING_REQUIRED=NO \
-                     CODE_SIGNING_ALLOWED=NO
-        # Note: To build a signed .ipa for real devices, you would need to 
-        # configure certificates and provisioning profiles here.
+          xcodebuild \
+            -workspace ios/HelloWorld.xcworkspace \
+            -scheme HelloWorld \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' \
+            -derivedDataPath ios/build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            build
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ios-build
+          name: ios-simulator-build
           path: ios/build/Build/Products/Release-iphonesimulator/*.app
