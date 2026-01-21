@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">STRIVER</string>
+    
+    <!-- Facebook Configuration -->
+    <!-- Replace YOUR_FACEBOOK_APP_ID with your actual Facebook App ID -->
+    <!-- Get it from: https://developers.facebook.com/apps -->
+    <string name="facebook_app_id">1181180404187861</string>
+    <string name="fb_login_protocol_scheme">fb1181180404187861</string>
+    <string name="facebook_client_token">0237f7689f4e4a145fdb2a57fcacb20e</string>
+</resources>

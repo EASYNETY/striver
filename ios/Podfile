@@ -1,0 +1,113 @@
+# Resolve react_native_pods.rb with node to allow for hoisting
+require Pod::Executable.execute_command('node', ['-p',
+  'require.resolve(
+    "react-native/scripts/react_native_pods.rb",
+    {paths: [process.argv[1]]},
+  )', __dir__]).strip
+
+platform :ios, '14.0'
+
+$FirebaseSDKVersion = '11.1.0'
+prepare_react_native_project!
+
+# Enable modular headers for better module resolution in Xcode 16
+use_modular_headers!
+
+# Use static frameworks for Swift pods compatibility
+use_frameworks! :linkage => :static
+
+# If you are using a `react-native-flipper` your iOS build will fail when `NO_FLIPPER=1` is set.
+
+project 'StriverApp.xcodeproj'
+
+# Skip boost checksum verification
+pre_install do |installer|
+  Pod::Installer::Xcode::TargetValidator.send(:remove_const, :VALIDATOR_DEPENDENCIES_SPECS)
+  Pod::Installer::Xcode::TargetValidator.const_set(:VALIDATOR_DEPENDENCIES_SPECS, nil)
+end
+
+# Resolve version mismatch between Firebase and Google Sign-in
+# Pinning version here
+
+target 'StriverApp' do
+  config = use_native_modules!
+
+  use_react_native!(
+    :path => config[:reactNativePath],
+    # Enables Flipper.
+    # Note: Flipper is disabled because use_frameworks! is enabled
+    :flipper_configuration => FlipperConfiguration.disabled,
+    # An absolute path to your application root.
+    :app_path => "#{Pod::Config.instance.installation_root}/.."
+  )
+
+  # Handled by use_native_modules! via react-native-fbsdk-next
+  # Removing manual additions to prevent duplicate symbols and search path issues
+
+  target 'StriverAppTests' do
+    inherit! :complete
+    # Pods for testing
+  end
+
+  post_install do |installer|
+    # https://github.com/facebook/react-native/blob/main/packages/react-native/scripts/react_native_pods.rb#L197-L202
+    react_native_post_install(
+      installer,
+      config[:reactNativePath],
+      :mac_catalyst_enabled => false
+    )
+
+    installer.pods_project.targets.each do |target|
+      # Fix Xcode 15 "Create Symlinks to Header Folders" warning/failure
+      target.build_phases.each do |phase|
+        if phase.respond_to?(:name) && phase.name == 'Create Symlinks to Header Folders'
+          if phase.respond_to?(:always_execute)
+            phase.always_execute = '1'
+          end
+        end
+      end
+
+      target.build_configurations.each do |config|
+        # Force Firebase 11 and RN 0.73 flags
+        config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= ['$(inherited)']
+        config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << 'FIR_VERSION_MAJOR=11'
+        config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << 'FIR_VERSION_MINOR=1'
+
+        # Bump deployment target to 14.0 for compatibility
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'
+        
+        # Apple Silicon Simulator Fix
+        config.build_settings['ONLY_ACTIVE_ARCH'] = 'NO'
+
+        # Force Swift version
+        config.build_settings['SWIFT_VERSION'] = '5.0'
+
+        # Xcode 16 fix for non-modular includes in framework modules
+        config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
+        
+        # Static frameworks fix
+        config.build_settings['DEFINES_MODULE'] = 'YES'
+
+        # Ensure Swift libraries are found in static framework mode
+        config.build_settings['LIBRARY_SEARCH_PATHS'] ||= ['$(inherited)']
+        config.build_settings['LIBRARY_SEARCH_PATHS'] << '"$(SDKROOT)/usr/lib/swift"'
+
+        # Fix Search Paths for Modular Headers + Static Frameworks
+        config.build_settings['HEADER_SEARCH_PATHS'] ||= ['$(inherited)']
+        config.build_settings['HEADER_SEARCH_PATHS'] << '"$(PODS_ROOT)/Headers/Public"'
+        config.build_settings['HEADER_SEARCH_PATHS'] << '"$(PODS_ROOT)/Headers/Public/Firebase"'
+        config.build_settings['HEADER_SEARCH_PATHS'] << '"$(PODS_ROOT)/Headers/Public/RNFBApp"'
+        
+        # Add search paths for Firebase and other static framework dependencies
+        config.build_settings['FRAMEWORK_SEARCH_PATHS'] ||= ['$(inherited)']
+        config.build_settings['FRAMEWORK_SEARCH_PATHS'] << '"$(PODS_CONFIGURATION_BUILD_DIR)/FirebaseCore"'
+        config.build_settings['FRAMEWORK_SEARCH_PATHS'] << '"$(PODS_CONFIGURATION_BUILD_DIR)/FirebaseAuth"'
+        config.build_settings['FRAMEWORK_SEARCH_PATHS'] << '"$(PODS_CONFIGURATION_BUILD_DIR)/RNFBApp"'
+
+        # Silence flooding warnings to prevent log-induced build failures
+        config.build_settings['CLANG_WARN_DOCUMENTATION_COMMENTS'] = 'NO'
+        config.build_settings['GCC_WARN_INHIBIT_ALL_WARNINGS'] = 'YES'
+      end
+    end
+  end
+end

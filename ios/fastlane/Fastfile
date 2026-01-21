@@ -1,0 +1,37 @@
+default_platform(:ios)
+
+platform :ios do
+  desc "Build the iOS app for distribution (IPA)"
+  lane :build_ipa do
+    # Create an archive and export IPA
+    gym(
+      scheme: "StriverApp",
+      workspace: "StriverApp.xcworkspace",
+      configuration: "Release",
+      export_method: "development", # Use development for testing without App Store
+      derived_data_path: "build",
+      output_directory: "build",
+      output_name: "StriverApp",
+      silent: false,
+      clean: true,
+      xcargs: "-allowProvisioningUpdates CLANG_WARN_DOCUMENTATION_COMMENTS=NO"
+    )
+  end
+
+  desc "Build the iOS app for simulator (Testing only)"
+  lane :build_sim do
+    gym(
+      scheme: "StriverApp",
+      workspace: "StriverApp.xcworkspace",
+      skip_codesigning: true,
+      skip_package_ipa: true,
+      destination: "platform=iOS Simulator,name=iPhone 16",
+      derived_data_path: "build",
+      silent: false,
+      verbose: true,
+      suppress_xcode_output: true,
+      configuration: "Debug",
+      xcargs: "-parallelizeTargets -jobs 2 CLANG_WARN_DOCUMENTATION_COMMENTS=NO CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO"
+    )
+  end
+end
