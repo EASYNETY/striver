@@ -1,4 +1,5 @@
-import { db } from '../api/firebase';
+import { db, firebaseAuth } from '../api/firebase';
+
 import firestore from '@react-native-firebase/firestore';
 import { CAREER_TIERS, EARNING_RULES, SPENDING_RULES, BADGE_TIERS } from '../constants/rewards';
 import { checkAgeTier } from '../utils/ageUtils';
@@ -264,5 +265,20 @@ export const RewardService = {
                 return tB - tA;
             });
         }
+    },
+
+    async updateTaskProgress(actionType: string, amount: number) {
+        // Compatibility wrapper for trackActivity
+        const currentUser = firebaseAuth.currentUser;
+        if (!currentUser) return;
+
+        if (actionType === 'watch_5_videos') {
+            // VideoFeed sends 'watch_5_videos' which is actually 'watch_video' in our new logic
+            await this.trackActivity(currentUser.uid, 'watch_video', { postId: 'none_tracked' });
+        } else {
+            await this.awardCoins(currentUser.uid, actionType);
+        }
     }
 };
+
+export default RewardService;

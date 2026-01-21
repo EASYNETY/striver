@@ -445,6 +445,13 @@ class PostService {
                 console.error("Following list error:", error);
             });
     }
+
+    // Increment view count
+    async incrementViews(postId: string): Promise<void> {
+        await this.postsCollection.doc(postId).update({
+            views: firestore.FieldValue.increment(1),
+        });
+    }
 }
 
 export default new PostService();

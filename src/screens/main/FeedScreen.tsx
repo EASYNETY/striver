@@ -27,7 +27,6 @@ const FeedScreen = () => {
 
     const loadPosts = async () => {
         if (initialPosts) {
-            // If posts were passed directly (careful with size)
             findInitialIndex(initialPosts);
             return;
         }
@@ -39,7 +38,6 @@ const FeedScreen = () => {
             if (userId) {
                 fetchedPosts = await postService.getUserPosts(userId);
             } else if (squadId) {
-                // Assuming postService has getSquadPosts, if not we fallback
                 fetchedPosts = await postService.getSquadPosts(squadId);
             }
 
@@ -74,10 +72,9 @@ const FeedScreen = () => {
             <VideoFeed
                 posts={posts}
                 initialScrollIndex={initialIndex}
-                onRefresh={loadPosts} // Simple refresh logic
+                onRefresh={loadPosts}
             />
 
-            {/* Back Button Overlay */}
             <SafeAreaView style={styles.backButtonArea}>
                 <TouchableOpacity
                     style={styles.backBtn}
