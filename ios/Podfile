@@ -7,7 +7,7 @@ require Pod::Executable.execute_command('node', ['-p',
 
 platform :ios, '14.0'
 
-$FirebaseSDKVersion = '11.1.0'
+$FirebaseSDKVersion = '10.28.0'
 prepare_react_native_project!
 
 # Enable modular headers for better module resolution in Xcode 16
@@ -19,12 +19,6 @@ use_frameworks! :linkage => :static
 # If you are using a `react-native-flipper` your iOS build will fail when `NO_FLIPPER=1` is set.
 
 project 'StriverApp.xcodeproj'
-
-# Skip boost checksum verification
-pre_install do |installer|
-  Pod::Installer::Xcode::TargetValidator.send(:remove_const, :VALIDATOR_DEPENDENCIES_SPECS)
-  Pod::Installer::Xcode::TargetValidator.const_set(:VALIDATOR_DEPENDENCIES_SPECS, nil)
-end
 
 # Resolve version mismatch between Firebase and Google Sign-in
 # Pinning version here
@@ -70,8 +64,8 @@ target 'StriverApp' do
       target.build_configurations.each do |config|
         # Force Firebase 11 and RN 0.73 flags
         config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= ['$(inherited)']
-        config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << 'FIR_VERSION_MAJOR=11'
-        config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << 'FIR_VERSION_MINOR=1'
+        config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << 'FIR_VERSION_MAJOR=10'
+        config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << 'FIR_VERSION_MINOR=28'
 
         # Bump deployment target to 14.0 for compatibility
         config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'
