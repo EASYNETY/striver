@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "565139145984",
+    "project_id": "striver-app-48562",
+    "storage_bucket": "striver-app-48562.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:565139145984:android:b6d106508d15fa772fdfe5",
+        "android_client_info": {
+          "package_name": "com.striverapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "565139145984-gubqbroreiobcuo1q0t8nc94gl40pck1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDPetcaLxIQEqVfB2Slc9Xf6UnbHeKSkTE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "565139145984-gubqbroreiobcuo1q0t8nc94gl40pck1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

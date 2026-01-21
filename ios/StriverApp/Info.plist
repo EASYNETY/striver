@@ -56,7 +56,13 @@
 		<true/>
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string></string>
+	<string>Striver needs access to your location for finding nearby events.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Striver needs access to your camera for recording and uploading videos.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Striver needs access to your photo library for uploading videos and profile pictures.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Striver needs access to your microphone for recording sound with your videos.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIRequiredDeviceCapabilities</key>
