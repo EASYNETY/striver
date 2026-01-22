@@ -107,8 +107,11 @@ target 'StriverApp' do
         
         # Aggressive strip of -G flag across all build settings
         config.build_settings.each do |key, value|
-          if value.is_a?(String) && value.include?('-G')
-            config.build_settings[key] = value.gsub(/-G(\s|$)/, ' ').strip
+          if value.is_a?(String)
+            # Remove standalone -G only
+            if value == '-G' || value.include?(' -G ') || value.start_with?('-G ') || value.end_with?(' -G')
+              config.build_settings[key] = value.gsub(/(^|\s)-G(\s|$)/, ' ').strip
+            end
           elsif value.is_a?(Array)
             config.build_settings[key].delete('-G')
           end
