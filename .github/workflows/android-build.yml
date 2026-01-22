@@ -32,8 +32,14 @@ jobs:
       - name: Build Release APK
         run: |
           cd android
+          # Create the keystore file from base64 secret
+          echo "${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}" | base64 --decode > app/my-upload-key.jks
           chmod +x gradlew
-          ./gradlew assembleRelease
+          ./gradlew assembleRelease \
+            -PMYAPP_UPLOAD_STORE_FILE=./app/my-upload-key.jks \
+            -PMYAPP_UPLOAD_STORE_PASSWORD=${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD }} \
+            -PMYAPP_UPLOAD_KEY_ALIAS=${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }} \
+            -PMYAPP_UPLOAD_KEY_PASSWORD=${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
