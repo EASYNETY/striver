@@ -102,9 +102,17 @@ target 'StriverApp' do
         config.build_settings['CLANG_WARN_DOCUMENTATION_COMMENTS'] = 'NO'
         config.build_settings['GCC_WARN_INHIBIT_ALL_WARNINGS'] = 'YES'
 
-        # Fix for BoringSSL-GRPC 'unsupported option -G' in Xcode 16
-        if config.build_settings['OTHER_CFLAGS']
-          config.build_settings['OTHER_CFLAGS'].delete('-G')
+        # Fix for BoringSSL-GRPC 'unsupported option -G' and other Xcode 16 issues
+        config.build_settings['ENABLE_USER_SCRIPT_SANDBOXING'] = 'NO'
+        
+        ['OTHER_CFLAGS', 'OTHER_CPLUSPLUSFLAGS'].each do |key|
+          if config.build_settings[key]
+            if config.build_settings[key].is_a?(Array)
+              config.build_settings[key].delete('-G')
+            elsif config.build_settings[key].is_a?(String)
+              config.build_settings[key] = config.build_settings[key].gsub('-G', '')
+            end
+          end
         end
       end
     end
