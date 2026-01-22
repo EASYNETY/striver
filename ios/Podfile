@@ -101,6 +101,11 @@ target 'StriverApp' do
         # Silence flooding warnings to prevent log-induced build failures
         config.build_settings['CLANG_WARN_DOCUMENTATION_COMMENTS'] = 'NO'
         config.build_settings['GCC_WARN_INHIBIT_ALL_WARNINGS'] = 'YES'
+
+        # Fix for BoringSSL-GRPC 'unsupported option -G' in Xcode 16
+        if config.build_settings['OTHER_CFLAGS']
+          config.build_settings['OTHER_CFLAGS'].delete('-G')
+        end
       end
     end
   end
