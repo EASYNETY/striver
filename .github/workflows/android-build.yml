@@ -33,10 +33,10 @@ jobs:
         run: |
           cd android
           # Create the keystore file from base64 secret
-          echo "${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}" | base64 --decode > app/my-upload-key.jks
+          echo "${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}" | base64 --decode > app/striver-upload-key.keystore
           chmod +x gradlew
           ./gradlew assembleRelease \
-            -PMYAPP_UPLOAD_STORE_FILE=./app/my-upload-key.jks \
+            -PMYAPP_UPLOAD_STORE_FILE=striver-upload-key.keystore \
             -PMYAPP_UPLOAD_STORE_PASSWORD=${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD }} \
             -PMYAPP_UPLOAD_KEY_ALIAS=${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }} \
             -PMYAPP_UPLOAD_KEY_PASSWORD=${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
