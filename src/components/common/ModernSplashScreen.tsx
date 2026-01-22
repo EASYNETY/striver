@@ -102,7 +102,6 @@ const ModernSplashScreen = () => {
         <View style={styles.container}>
             <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-            {/* Background Glow */}
             <View style={dynamicStyles.glow} />
 
             <Animated.View style={[
@@ -110,29 +109,26 @@ const ModernSplashScreen = () => {
                 {
                     opacity: fadeAnim,
                     transform: [
-                        { scale: Animated.multiply(scaleAnim, pulseAnim) },
+                        { scale: scaleAnim },
                         { translateY: translateY }
                     ]
                 }
             ]}>
-                <View style={styles.logoWrapper}>
-                    <SvgXml xml={STRIVER_SVG} width={130} height={130} />
+                <View style={styles.logoBox}>
+                    <Text style={styles.logoText}>STRIVER</Text>
                 </View>
 
-                <Animated.View style={[styles.textContainer, { opacity: textOpacity }]}>
-                    <Text style={styles.brandName}>STRIVER</Text>
-                    <View style={styles.divider} />
-                    <Text style={styles.tagline}>THE FUTURE OF FOOTBALL</Text>
-                </Animated.View>
+                {/* Loading Elements */}
+                <View style={{ alignItems: 'center' }}>
+                    <Animated.View style={[styles.progressBar, {
+                        width: progressBar.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0, 200]
+                        })
+                    }]} />
+                    <Text style={styles.loadingText}>PREPARING YOUR ARENA...</Text>
+                </View>
             </Animated.View>
-
-            {/* Premium Loading Footer */}
-            <View style={styles.footer}>
-                <View style={styles.progressContainer}>
-                    <Animated.View style={[styles.progressBar, { width: progressWidth }]} />
-                </View>
-                <Text style={styles.loadingText}>PREPARING YOUR ARENA...</Text>
-            </View>
         </View>
     );
 };
@@ -147,69 +143,43 @@ const styles = StyleSheet.create({
     content: {
         alignItems: 'center',
     },
-    logoWrapper: {
-        width: 180,
-        height: 180,
-        borderRadius: 90,
-        overflow: 'hidden',
+    logoBox: {
+        width: 140,
+        height: 140,
+        borderRadius: 70,
         backgroundColor: COLORS.primary,
         alignItems: 'center',
         justifyContent: 'center',
-        // Neon Shadow
-        shadowColor: COLORS.primary,
-        shadowOffset: { width: 0, height: 15 },
-        shadowOpacity: 0.5,
-        shadowRadius: 30,
-        elevation: 25,
-    },
-    textContainer: {
-        alignItems: 'center',
-        marginTop: 40,
-    },
-    brandName: {
-        fontSize: 48,
-        fontWeight: '900',
-        color: COLORS.white,
-        letterSpacing: 10,
-        fontFamily: 'Montserrat-Bold',
-    },
-    divider: {
-        width: 60,
-        height: 4,
-        backgroundColor: COLORS.primary,
-        marginVertical: 15,
-        borderRadius: 2,
-    },
-    tagline: {
-        fontSize: 12,
-        fontWeight: '800',
-        color: 'rgba(255, 255, 255, 0.5)',
-        letterSpacing: 6,
-        textTransform: 'uppercase',
-    },
-    footer: {
-        position: 'absolute',
-        bottom: 100,
-        width: '60%',
-        alignItems: 'center',
-    },
-    progressContainer: {
-        width: '100%',
-        height: 2,
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-        borderRadius: 1,
         overflow: 'hidden',
-        marginBottom: 15,
+        borderWidth: 3,
+        borderColor: 'rgba(255,255,255,0.3)',
+        shadowColor: COLORS.primary,
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.4,
+        shadowRadius: 20,
+        elevation: 15,
     },
-    progressBar: {
-        height: '100%',
-        backgroundColor: COLORS.primary,
+    logoText: {
+        fontSize: 32,
+        fontWeight: '900',
+        color: '#0B1129', // Dark Navy
+        letterSpacing: 1,
+        fontFamily: 'Montserrat-Bold',
+        fontStyle: 'italic',
     },
     loadingText: {
+        marginTop: 40,
         fontSize: 10,
         fontWeight: '900',
         color: 'rgba(255, 255, 255, 0.3)',
         letterSpacing: 2,
+    },
+    progressBar: {
+        height: 2,
+        backgroundColor: COLORS.primary,
+        width: 200,
+        marginTop: 20,
+        borderRadius: 1,
     },
 });
 

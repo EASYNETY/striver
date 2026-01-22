@@ -514,23 +514,7 @@ const MemoizedPostItem = React.memo(({ item, index, isFocused, visibleItemIndex,
     const [progress, setProgress] = useState(0);
 
     // Gesture Handling for this specific video item
-    const swipeGesture = Gesture.Pan()
-        .onEnd((e) => {
-            try {
-                if (e.translationX < -100) {
-                    // Swipe Left: New Subject (Reload with new random data or shuffle)
-                    runOnJS(navigation.navigate)('HomeFeed', { refresh: Date.now() });
-                } else if (e.translationX > 100) {
-                    // Swipe Right: Add Response
-                    runOnJS(navigation.navigate)('Upload', { responseTo: item.id });
-                } else if (e.translationY < -100) {
-                    // Swipe Up: Expand Responses
-                    runOnJS(onExpandThreads)(item.id);
-                }
-            } catch (error) {
-                console.error('Swipe gesture error:', error);
-            }
-        });
+     
 
     const longPressGesture = Gesture.LongPress()
         .onEnd((e, success) => {
@@ -547,10 +531,8 @@ const MemoizedPostItem = React.memo(({ item, index, isFocused, visibleItemIndex,
             }
         });
 
-    const composedGesture = Gesture.Exclusive(swipeGesture, longPressGesture);
-
     return (
-        <GestureDetector gesture={composedGesture}>
+        <GestureDetector gesture={longPressGesture}>
             <View style={styles.postContainer}>
                 {item.status === 'rejected' ? (
                     <View style={styles.rejectedContainer}>
@@ -990,9 +972,9 @@ const HomeFeedScreen = () => {
                     renderItem={renderItem}
                     keyExtractor={(item) => item.id}
                     pagingEnabled
-                    horizontal={false}
-                    showsVerticalScrollIndicator={false}
-                    snapToInterval={WINDOW_HEIGHT}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    snapToInterval={WINDOW_WIDTH}
                     snapToAlignment="start"
                     decelerationRate="fast"
                     onViewableItemsChanged={onViewableItemsChanged}
@@ -1002,8 +984,8 @@ const HomeFeedScreen = () => {
                     windowSize={3}
                     removeClippedSubviews={Platform.OS === 'android'}
                     getItemLayout={(data, index) => ({
-                        length: WINDOW_HEIGHT,
-                        offset: WINDOW_HEIGHT * index,
+                        length: WINDOW_WIDTH,
+                        offset: WINDOW_WIDTH * index,
                         index: index ?? 0,
                     })}
                     refreshControl={

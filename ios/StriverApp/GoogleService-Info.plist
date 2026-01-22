@@ -12,7 +12,12 @@
 	<string>AIzaSyD2yzPLRA739p7zlIa_j3XwjiMJjn3NDM4</string>
 	<key>GCM_SENDER_ID</key>
 	<string>565139145984</string>
-	<key>PLIST_VERSION</key>
+	<key>PLIST_VERSION</key>git pull
+# Clean out the specific library that is failing
+cd ios
+rm -rf Pods/BoringSSL-GRPC Podfile.lock
+# Force reinstall
+pod install --repo-update
 	<string>1</string>
 	<key>BUNDLE_ID</key>
 	<string>com.striverapp</string>

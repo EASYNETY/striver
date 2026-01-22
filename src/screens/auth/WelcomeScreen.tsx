@@ -117,34 +117,31 @@ const styles = StyleSheet.create({
         marginBottom: SPACING.lg,
     },
     logoBox: {
-        width: 84,
-        height: 84,
+        width: 100,                   // optional: make circle slightly bigger
+        height: 100,
+        borderRadius: 50,
         backgroundColor: COLORS.primary,
-        borderRadius: 42,
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 2,
-        borderWidth: 1.5,
-        borderColor: 'rgba(255,255,255,0.4)',
-        shadowColor: COLORS.primary,
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.5,
-        shadowRadius: 15,
-        elevation: 12,
+        overflow: 'hidden',           // crucial
+        borderWidth: 2,
+        borderColor: 'rgba(255,255,255,0.3)',
+        // ... shadows ...
+    },
+
+    logoImage: {
+        width: '100%',
+        height: '100%',
+        resizeMode: 'cover',
     },
     logoShadow: {
         position: 'absolute',
         bottom: 5,
         width: 60,
         height: 10,
-        backgroundColor: 'rgba(0,0,0,0.3)',
+        // backgroundColor: 'rgba(0,0,0,0.3)',
         borderRadius: 20,
         transform: [{ scaleX: 1.5 }],
-    },
-    logoImage: {
-        width: 60,
-        height: 60,
-        resizeMode: 'contain',
     },
     appName: {
         fontSize: 56,

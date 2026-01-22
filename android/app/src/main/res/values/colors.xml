@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Striver Brand Colors -->
+    <color name="splash_background">#050A18</color>
+    <color name="primary">#8FFBB9</color>
+    <color name="dark_navy">#0B1129</color>
+</resources>
