@@ -172,7 +172,10 @@ target 'StriverApp' do
         puts "Patching Boost: removing std::unary_function..."
         content = File.read(hash_header)
         new_content = content.gsub(/struct hash_base\s*:\s*std::unary_function<T,\s*std::size_t>\s*{};/, "struct hash_base {};")
-        File.open(hash_header, "w") { |f| f.puts new_content }
+        if content != new_content
+          File.chmod(0664, hash_header)
+          File.open(hash_header, "w") { |f| f.puts new_content }
+        end
       end
 
       # 2. Fix Folly json.cpp for Xcode 16
@@ -182,9 +185,11 @@ target 'StriverApp' do
         content = File.read(json_cpp)
         unless content.include?("#include <limits>")
           new_content = "#include <limits>\n" + content
+          File.chmod(0664, json_cpp)
           File.open(json_cpp, "w") { |f| f.puts new_content }
         end
       end
+
     end
 
     # --- THE NUCLEAR SCRUB ---
