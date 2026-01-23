@@ -1,9 +1,6 @@
 source 'https://github.com/CocoaPods/Specs.git'
 source 'https://cdn.cocoapods.org/'
 
-# FORCE BOOST TO USE STABLE MIRROR
-pod 'boost', :http => 'https://archives.boost.io/release/1.83.0/source/boost_1_83_0.tar.bz2'
-
 # Resolve react_native_pods.rb with node to allow for hoisting
 require Pod::Executable.execute_command('node', ['-p',
   'require.resolve(
