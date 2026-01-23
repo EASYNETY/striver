@@ -10,6 +10,21 @@ require Pod::Executable.execute_command('node', ['-p',
 platform :ios, '14.0'
 
 $FirebaseSDKVersion = '10.28.0'
+
+# --- THE BOOST MIRROR FIX ---
+# This intercepts the boost download and forces it to use a reliable mirror
+# before any other pods are installed.
+pre_install do |installer|
+  installer.pod_targets.each do |target|
+    if target.name == 'boost'
+      target.spec_consumer.spec.source = { 
+        :http => 'https://archives.boost.io/release/1.83.0/source/boost_1_83_0.tar.bz2',
+        :sha256 => '6478edfe2f3305127cffe8caf73ea0176c53769f4bf1585be237eb30798c3b8e'
+      }
+    end
+  end
+end
+
 prepare_react_native_project!
 
 # Enable modular headers for better module resolution in Xcode 16
