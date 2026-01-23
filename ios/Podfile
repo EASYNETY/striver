@@ -64,68 +64,36 @@ target 'StriverApp' do
         end
       end
 
+      # Force stability settings on all targets
       target.build_configurations.each do |config|
-        # Force Firebase 11 and RN 0.73 flags + Xcode 16 C++ compatibility
         config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= ['$(inherited)']
         config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << 'FIR_VERSION_MAJOR=10'
         config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << 'FIR_VERSION_MINOR=28'
         config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << '_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES'
+        config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << '_LIBCPP_ENABLE_CXX17_REMOVED_UNARY_FUNCTION'
 
-        # Bump deployment target to 14.0 for compatibility
+        # Bump deployment target and fix archs
         config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'
-        
-        # Apple Silicon Simulator Fix: Only build active architecture for Debug
         config.build_settings['ONLY_ACTIVE_ARCH'] = 'YES'
-
-        # Force Swift version
         config.build_settings['SWIFT_VERSION'] = '5.0'
-
-        # Xcode 16 fix for non-modular includes in framework modules
         config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
-        
-        # Static frameworks fix
         config.build_settings['DEFINES_MODULE'] = 'YES'
 
-        # Ensure Swift libraries are found in static framework mode
-        config.build_settings['LIBRARY_SEARCH_PATHS'] ||= ['$(inherited)']
-        config.build_settings['LIBRARY_SEARCH_PATHS'] << '"$(SDKROOT)/usr/lib/swift"'
-
-        # Fix Search Paths for Modular Headers + Static Frameworks
-        config.build_settings['HEADER_SEARCH_PATHS'] ||= ['$(inherited)']
-        config.build_settings['HEADER_SEARCH_PATHS'] << '"$(PODS_ROOT)/Headers/Public"'
-        config.build_settings['HEADER_SEARCH_PATHS'] << '"$(PODS_ROOT)/Headers/Public/Firebase"'
-        config.build_settings['HEADER_SEARCH_PATHS'] << '"$(PODS_ROOT)/Headers/Public/RNFBApp"'
-        
-        # Add search paths for Firebase and other static framework dependencies
-        config.build_settings['FRAMEWORK_SEARCH_PATHS'] ||= ['$(inherited)']
-        config.build_settings['FRAMEWORK_SEARCH_PATHS'] << '"$(PODS_CONFIGURATION_BUILD_DIR)/FirebaseCore"'
-        config.build_settings['FRAMEWORK_SEARCH_PATHS'] << '"$(PODS_CONFIGURATION_BUILD_DIR)/FirebaseAuth"'
-        config.build_settings['FRAMEWORK_SEARCH_PATHS'] << '"$(PODS_CONFIGURATION_BUILD_DIR)/RNFBApp"'
-
-        # Silence flooding warnings to prevent log-induced build failures
+        # Silence flooding warnings
         config.build_settings['CLANG_WARN_DOCUMENTATION_COMMENTS'] = 'NO'
         config.build_settings['GCC_WARN_INHIBIT_ALL_WARNINGS'] = 'YES'
 
-        # Xcode 16 stability bundle
+        # Xcode 16 Stability Bundle
         config.build_settings['ENABLE_USER_SCRIPT_SANDBOXING'] = 'NO'
         config.build_settings['GENERATE_PROFILING_CODE'] = 'NO'
-        config.build_settings['GCC_PASCAL_STRINGS'] = 'NO'
         config.build_settings['CLANG_COVERAGE_MAPPING'] = 'NO'
+        config.build_settings['CLANG_ENABLE_CODE_COVERAGE'] = 'NO'
         config.build_settings['ENABLE_TESTABILITY'] = 'NO'
         config.build_settings['CLANG_ENABLE_MODULE_DEBUGGING'] = 'NO'
-        
-        # Speed & Stability 
-        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.4'
-        config.build_settings['ONLY_ACTIVE_ARCH'] = 'YES'
-        
-        # Add the specific flag to re-enable std::unary_function in Xcode 16
-        config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= ['$(inherited)']
-        config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << '_LIBCPP_ENABLE_CXX17_REMOVED_UNARY_FUNCTION'
         
         ['OTHER_CFLAGS', 'OTHER_CPLUSPLUSFLAGS', 'OTHER_LDFLAGS'].each do |flag_key|
           if config.build_settings[flag_key]
             if config.build_settings[flag_key].is_a?(String)
-              # Absolute clobber of -G with a regex that handles all variations
               config.build_settings[flag_key] = config.build_settings[flag_key].gsub(/(^|\s)-G(\s|$)/, ' ').strip
             elsif config.build_settings[flag_key].is_a?(Array)
               config.build_settings[flag_key].reject! { |flag| flag == '-G' || flag == '-G ' || flag == ' -G' }
@@ -134,45 +102,36 @@ target 'StriverApp' do
         end
       end
 
-
       # Target problematic pods with merged community recommendations + our fixes
-      if ['BoringSSL-GRPC', 'RCT-Folly', 'gRPC-Core', 'gRPC-C++', 'abseil'].include?(target.name)
+      if ['BoringSSL-GRPC', 'RCT-Folly', 'gRPC-Core', 'gRPC-C++', 'abseil', 'gRPC-Core-cf0db550', 'FirebaseCore'].include?(target.name)
         target.build_configurations.each do |config|
-          config.build_settings['OTHER_CFLAGS'] = [
-            '$(inherited)', 
-            '-Wno-shorten-64-to-32',
-            '-Wno-undefined-internal',
-            '-Wno-deprecated',
-            '-Wno-implicit-int-conversion'
-          ]
-          config.build_settings['OTHER_CPLUSPLUSFLAGS'] = [
-            '$(inherited)', 
-            '-Wno-shorten-64-to-32', 
-            '-std=c++17', 
-            '-D_LIBCPP_ENABLE_CXX17_REMOVED_UNARY_FUNCTION=1',
-            '-DFOLLY_NO_CONFIG=1',
-            '-DFOLLY_MOBILE=1',
-            '-DFOLLY_USE_LIBCPP=1'
-          ]
-          config.build_settings['OTHER_LDFLAGS'] = ['$(inherited)']
+          config.build_settings['OTHER_CFLAGS'] ||= ['$(inherited)']
+          config.build_settings['OTHER_CFLAGS'] << '-Wno-shorten-64-to-32' << '-Wno-deprecated' << '-fno-profile-instr-generate' << '-fno-coverage-mapping'
+          
+          config.build_settings['OTHER_CPLUSPLUSFLAGS'] ||= ['$(inherited)']
+          config.build_settings['OTHER_CPLUSPLUSFLAGS'] << '-Wno-shorten-64-to-32' << '-std=c++17' << '-D_LIBCPP_ENABLE_CXX17_REMOVED_UNARY_FUNCTION=1' << '-fno-profile-instr-generate' << '-fno-coverage-mapping'
+          
           config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++17'
           config.build_settings['CLANG_CXX_LIBRARY'] = 'libc++'
           
-          # Forcefully remove -G from these specific targets
-          config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= ['$(inherited)']
-          config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << '_LIBCPP_ENABLE_CXX17_REMOVED_UNARY_FUNCTION=1'
+          # Forcefully remove -G again just to be sure
+          if config.build_settings['OTHER_CFLAGS'].is_a?(Array)
+             config.build_settings['OTHER_CFLAGS'].reject! { |f| f == '-G' }
+          end
         end
       end
+    end
 
-      # --- THE NUCLEAR PATCHES ---
+    # --- THE NUCLEAR PATCHES (Performed once outside the loop) ---
+    begin
       # 1. Fix Boost unary_function for Xcode 16
       hash_header = File.join(installer.sandbox.root, "boost/boost/container_hash/hash.hpp")
       if File.exist?(hash_header)
         puts "Patching Boost: removing std::unary_function..."
+        File.chmod(0664, hash_header)
         content = File.read(hash_header)
         new_content = content.gsub(/struct hash_base\s*:\s*std::unary_function<T,\s*std::size_t>\s*{};/, "struct hash_base {};")
         if content != new_content
-          File.chmod(0664, hash_header)
           File.open(hash_header, "w") { |f| f.puts new_content }
         end
       end
@@ -181,33 +140,38 @@ target 'StriverApp' do
       json_cpp = File.join(installer.sandbox.root, "RCT-Folly/folly/json.cpp")
       if File.exist?(json_cpp)
         puts "Patching Folly: adding missing includes..."
+        File.chmod(0664, json_cpp)
         content = File.read(json_cpp)
         unless content.include?("#include <limits>")
           new_content = "#include <limits>\n" + content
-          File.chmod(0664, json_cpp)
           File.open(json_cpp, "w") { |f| f.puts new_content }
         end
       end
-
+    rescue => e
+      puts "Warning: Failed to apply physical patches - #{e.message}"
     end
 
     # --- THE NUCLEAR SCRUB ---
     # This manually cleans the .xcconfig files on disk right after they are generated.
-    # This is the only way to ensure the -G flag is gone in Xcode 16.
+    # We do this LAST to catch anything injected during the installer's finalize phase.
     puts "--- RUNNING NUCLEAR -G SCRUB ON XCCONFIG FILES ---"
     Dir.glob(File.join(installer.sandbox.root, "**/*.xcconfig")).each do |file_path|
-      content = File.read(file_path)
-      if content.include?("-G")
-        puts "Cleaning ghost flag from: #{File.basename(file_path)}"
-        # Aggressive strip using a loop to catch multiple occurrences and various surrounds
-        loop do
-          new_content = content.gsub(/(^|\s)-G(\s|$)/, ' ')
-          break if new_content == content
-          content = new_content
+      begin
+        content = File.read(file_path)
+        if content.include?("-G")
+          puts "Cleaning ghost flag from: #{File.basename(file_path)}"
+          loop do
+            new_content = content.gsub(/(^|\s)-G(\s|$)/, ' ')
+            break if new_content == content
+            content = new_content
+          end
+          File.chmod(0664, file_path)
+          File.open(file_path, "w") { |f| f.puts content }
         end
-        File.open(file_path, "w") { |f| f.puts content }
+      rescue => e
+        puts "Could not scrub #{file_path}: #{e.message}"
       end
     end
-
   end
 end
+
