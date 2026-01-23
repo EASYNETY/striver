@@ -118,19 +118,26 @@ target 'StriverApp' do
       end
 
       # Target BoringSSL-GRPC specifically with a TOTAL CLOBBER override
-      # We remove $(inherited) because that is where the bad -G flag usually hides
       if target.name.include?('BoringSSL-GRPC')
         target.build_configurations.each do |config|
-          puts "--- Stripping inherited flags from #{target.name} [#{config.name}] to fix -G error ---"
           config.build_settings['OTHER_CFLAGS'] = ['-Wno-shorten-64-to-32']
           config.build_settings['OTHER_CPLUSPLUSFLAGS'] = ['-Wno-shorten-64-to-32']
           config.build_settings['OTHER_LDFLAGS'] = ['$(inherited)']
-          
-          # Remove -G from the inherited LDFLAGS just in case
-          if config.build_settings['OTHER_LDFLAGS'].is_a?(Array)
-            config.build_settings['OTHER_LDFLAGS'].delete('-G')
-          end
         end
+      end
+    end
+
+    # --- THE NUCLEAR SCRUB ---
+    # This manually cleans the .xcconfig files on disk right after they are generated.
+    # This is the only way to ensure the -G flag is gone in Xcode 16.
+    puts "--- RUNNING NUCLEAR -G SCRUB ON XCCONFIG FILES ---"
+    Dir.glob(File.join(installer.sandbox.root, "**/*.xcconfig")).each do |file_path|
+      content = File.read(file_path)
+      if content.include?("-G")
+        puts "Cleaning ghost flag from: #{File.basename(file_path)}"
+        # Remove -G as a standalone flag only
+        new_content = content.gsub(/(^|\s)-G(\s|$)/, ' ')
+        File.open(file_path, "w") { |f| f.puts new_content }
       end
     end
   end
