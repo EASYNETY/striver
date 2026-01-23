@@ -64,16 +64,17 @@ target 'StriverApp' do
       end
 
       target.build_configurations.each do |config|
-        # Force Firebase 11 and RN 0.73 flags
+        # Force Firebase 11 and RN 0.73 flags + Xcode 16 C++ compatibility
         config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= ['$(inherited)']
         config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << 'FIR_VERSION_MAJOR=10'
         config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << 'FIR_VERSION_MINOR=28'
+        config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << '_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES'
 
         # Bump deployment target to 14.0 for compatibility
         config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'
         
-        # Apple Silicon Simulator Fix
-        config.build_settings['ONLY_ACTIVE_ARCH'] = 'NO'
+        # Apple Silicon Simulator Fix: Only build active architecture for Debug
+        config.build_settings['ONLY_ACTIVE_ARCH'] = 'YES'
 
         # Force Swift version
         config.build_settings['SWIFT_VERSION'] = '5.0'
