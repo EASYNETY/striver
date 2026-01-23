@@ -106,12 +106,13 @@ target 'StriverApp' do
         config.build_settings['CLANG_WARN_DOCUMENTATION_COMMENTS'] = 'NO'
         config.build_settings['GCC_WARN_INHIBIT_ALL_WARNINGS'] = 'YES'
 
-        # Xcode 16 fix: aggressively strip the unsupported '-G' flag
+        # Xcode 16 stability bundle
         config.build_settings['ENABLE_USER_SCRIPT_SANDBOXING'] = 'NO'
         config.build_settings['GENERATE_PROFILING_CODE'] = 'NO'
         config.build_settings['GCC_PASCAL_STRINGS'] = 'NO'
         config.build_settings['CLANG_COVERAGE_MAPPING'] = 'NO'
         config.build_settings['ENABLE_TESTABILITY'] = 'NO'
+        config.build_settings['CLANG_ENABLE_MODULE_DEBUGGING'] = 'NO'
         
         ['OTHER_CFLAGS', 'OTHER_CPLUSPLUSFLAGS', 'OTHER_LDFLAGS'].each do |flag_key|
           if config.build_settings[flag_key]
@@ -145,8 +146,8 @@ target 'StriverApp' do
       content = File.read(file_path)
       if content.include?("-G")
         puts "Cleaning ghost flag from: #{File.basename(file_path)}"
-        # Remove -G as a standalone flag only
-        new_content = content.gsub(/(^|\s)-G(\s|$)/, ' ')
+        # Aggressive strip including leading/trailing spaces
+        new_content = content.gsub(/ -G /, ' ').gsub(/ -G$/, ' ').gsub(/^-G /, ' ').gsub(/^-G$/, ' ')
         File.open(file_path, "w") { |f| f.puts new_content }
       end
     end
