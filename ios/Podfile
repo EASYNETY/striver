@@ -111,16 +111,15 @@ target 'StriverApp' do
         config.build_settings['GENERATE_PROFILING_CODE'] = 'NO'
         config.build_settings['GCC_PASCAL_STRINGS'] = 'NO'
         config.build_settings['CLANG_COVERAGE_MAPPING'] = 'NO'
+        config.build_settings['ENABLE_TESTABILITY'] = 'NO'
         
         ['OTHER_CFLAGS', 'OTHER_CPLUSPLUSFLAGS', 'OTHER_LDFLAGS'].each do |flag_key|
           if config.build_settings[flag_key]
             if config.build_settings[flag_key].is_a?(String)
-              # Broad sweep to remove -G from any string
-              config.build_settings[flag_key] = config.build_settings[flag_key].gsub(/\s-G\s/, ' ').gsub(/^-G\s/, '').gsub(/\s-G$/, '').gsub(/^-G$/, '')
+              # Absolute clobber of -G with a regex that handles all variations
+              config.build_settings[flag_key] = config.build_settings[flag_key].gsub(/(^|\s)-G(\s|$)/, ' ').strip
             elsif config.build_settings[flag_key].is_a?(Array)
-              config.build_settings[flag_key].delete('-G')
-              config.build_settings[flag_key].delete('-G ')
-              config.build_settings[flag_key].delete(' -G')
+              config.build_settings[flag_key].reject! { |flag| flag == '-G' || flag == '-G ' || flag == ' -G' }
             end
           end
         end
