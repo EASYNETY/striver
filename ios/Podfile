@@ -84,8 +84,18 @@ post_install do |installer|
         config.build_settings['GENERATE_PROFILING_CODE'] = 'NO'
         config.build_settings['GCC_INSTRUMENT_PROGRAM_FLOW_ARCS'] = 'NO'
         config.build_settings['GCC_GENERATE_TEST_COVERAGE_FILES'] = 'NO'
+        config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++20'   # or 'gnu++20'
+config.build_settings['CLANG_CXX_LIBRARY'] = 'libc++'
       end
     end
+   
+    if target.name == 'RCT-Folly'
+      target.build_configurations.each do |config|
+        config.build_settings['GCC_WARN_INHIBIT_ALL_WARNINGS'] = 'YES'   # quiet warnings
+        config.build_settings['CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER'] = 'NO'
+        config.build_settings['CLANG_WARN_DOCUMENTATION_COMMENTS'] = 'NO'
+      end
+end
 
     # Optional: Silence symlink warnings without forcing always_execute
     target.build_phases.each do |phase|
