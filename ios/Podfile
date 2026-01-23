@@ -36,199 +36,67 @@ target 'StriverApp' do
 end
 
 post_install do |installer|
-  # https://github.com/facebook/react-native/blob/main/packages/react-native/scripts/react_native_pods.rb#L197-L202
+  # React Native required post-install (keep this)
   react_native_post_install(
     installer,
     "../node_modules/react-native",
     :mac_catalyst_enabled => false
   )
 
-  # 1. Force Project-Level Settings (The most important for Xcode 16)
-  installer.pods_project.build_configurations.each do |config|
-    config.build_settings['GENERATE_PROFILING_CODE'] = 'NO'
-    config.build_settings['CLANG_ENABLE_CODE_COVERAGE'] = 'NO'
-    config.build_settings['CLANG_COVERAGE_MAPPING'] = 'NO'
-    config.build_settings['GCC_INSTRUMENT_PROGRAM_FLOW_ARCS'] = 'NO'
-    config.build_settings['ENABLE_TESTABILITY'] = 'NO'
-    config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.1'
-  end
-
   installer.pods_project.targets.each do |target|
-    # Fix Xcode 15/16 "Create Symlinks to Header Folders" warning/failure
-    target.build_phases.each do |phase|
-      if phase.respond_to?(:name) && phase.name == 'Create Symlinks to Header Folders'
-        if phase.respond_to?(:always_execute)
-          phase.always_execute = '1'
-        end
-      end
-    end
-
-    # Force stability settings on ALL targets
+    # Align deployment target everywhere (safe and prevents SDK mismatches)
     target.build_configurations.each do |config|
-      # Baseline Preprocessor Definitions
-      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= ['$(inherited)']
-      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << 'FIR_VERSION_MAJOR=10'
-      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << 'FIR_VERSION_MINOR=28'
-      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << '_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES'
-      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << '_LIBCPP_ENABLE_CXX17_REMOVED_UNARY_FUNCTION'
-
-      # Global Xcode 16 Stability
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.1'
-      config.build_settings['ONLY_ACTIVE_ARCH'] = 'YES'
-      config.build_settings['SWIFT_VERSION'] = '5.0'
-      config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
-      config.build_settings['DEFINES_MODULE'] = 'YES'
-      config.build_settings['ENABLE_USER_SCRIPT_SANDBOXING'] = 'NO'
-      
-      # Disable all Profile/Testability to prevent -G injection
-      config.build_settings['GENERATE_PROFILING_CODE'] = 'NO'
-      config.build_settings['CLANG_COVERAGE_MAPPING'] = 'NO'
-      config.build_settings['CLANG_ENABLE_CODE_COVERAGE'] = 'NO'
-      config.build_settings['ENABLE_TESTABILITY'] = 'NO'
-      config.build_settings['GCC_INSTRUMENT_PROGRAM_FLOW_ARCS'] = 'NO'
-      config.build_settings['GCC_GENERATE_TEST_COVERAGE_FILES'] = 'NO'
-
-      # Enforce C++17 globally to prevent mismatch in BoringSSL/Folly
-      config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++17'
-      config.build_settings['CLANG_CXX_LIBRARY'] = 'libc++'
-
-      # Direct scrubbing of -G and profiling flags from all buckets
-      ['OTHER_CFLAGS', 'OTHER_CPLUSPLUSFLAGS', 'OTHER_LDFLAGS', 'OTHER_SWIFT_FLAGS'].each do |flag_key|
-        config.build_settings[flag_key] ||= ['$(inherited)']
-        
-        # Scrub -G and positive profiling from everything (String or Array)
-        if config.build_settings[flag_key].is_a?(String)
-          config.build_settings[flag_key] = config.build_settings[flag_key].gsub(/(^|\s)-G(\s|$)/, ' ').strip
-          config.build_settings[flag_key] = config.build_settings[flag_key].gsub(/-fprofile-instr-generate/, ' ')
-          config.build_settings[flag_key] = config.build_settings[flag_key].gsub(/-fcoverage-mapping/, ' ')
-          # Also scrub the "no" versions we added earlier just in case they are stuck
-          config.build_settings[flag_key] = config.build_settings[flag_key].gsub(/-fno-profile-instr-generate/, ' ')
-          config.build_settings[flag_key] = config.build_settings[flag_key].gsub(/-fno-coverage-mapping/, ' ')
-        elsif config.build_settings[flag_key].is_a?(Array)
-          config.build_settings[flag_key].reject! { |flag| 
-            f = flag.to_s.strip
-            f == '-G' || f.include?("-fprofile") || f.include?("-fcoverage") || f.include?("-fno-profile") || f.include?("-fno-coverage")
-          }
-        end
-
-        # Add classic linker flag for Xcode 15/16 stability
-        if flag_key == 'OTHER_LDFLAGS'
-          if config.build_settings[flag_key].is_a?(String)
-            config.build_settings[flag_key] << ' -Wl,-ld_classic' unless config.build_settings[flag_key].include?('ld_classic')
-          elsif config.build_settings[flag_key].is_a?(Array)
-            config.build_settings[flag_key] << '-Wl,-ld_classic' unless config.build_settings[flag_key].include?('-Wl,-ld_classic')
-          end
-        end
-      end
-
-      # Silence flooding warnings
-      config.build_settings['GCC_WARN_INHIBIT_ALL_WARNINGS'] = 'YES'
-      config.build_settings['CLANG_WARN_DOCUMENTATION_COMMENTS'] = 'NO'
     end
 
-    # --- THE FIREWALL: Explicitly clean the targets that are failing ---
-    if ['FirebaseSharedSwift', 'StripeCore', 'FirebaseCore', 'FirebaseAppCheck'].include?(target.name)
-      target.build_configurations.each do |config|
-        # Force these to be COMPLETELY clean
-        config.build_settings['OTHER_SWIFT_FLAGS'] = ['$(inherited)']
-        config.build_settings['OTHER_CFLAGS'] = ['$(inherited)']
-        config.build_settings['SWIFT_COMPILATION_MODE'] = 'wholemodule'
-        config.build_settings['SWIFT_PROFILING'] = 'NO'
-        
-        # Only apply -Onone to Debug builds, let release builds use their default.
-        if config.name == 'Debug'
-          config.build_settings['SWIFT_OPTIMIZATION_LEVEL'] = '-Onone'
-        else # For Release or other custom configurations
-          config.build_settings['SWIFT_OPTIMIZATION_LEVEL'] = '-O'
-        end
-      end
-    end
-
-    # Specialized fixes for the most toxic libraries
-    if ['BoringSSL-GRPC', 'RCT-Folly', 'gRPC-Core', 'gRPC-C++', 'abseil', 'FirebaseCore', 'AppAuth'].include?(target.name)
-      target.build_configurations.each do |config|
-        config.build_settings['OTHER_CFLAGS'] << '-Wno-shorten-64-to-32' << '-Wno-deprecated'
-        config.build_settings['OTHER_CPLUSPLUSFLAGS'] << '-Wno-shorten-64-to-32' << '-D_LIBCPP_ENABLE_CXX17_REMOVED_UNARY_FUNCTION=1'
-      end
-    end
-
-    # === NUCLEAR OPTION FOR BORINGSSL-GRPC ===
+    # === Targeted fix ONLY for BoringSSL-GRPC ===
     if target.name == 'BoringSSL-GRPC'
       target.build_configurations.each do |config|
-        # Completely override and rebuild the flags arrays
-        config.build_settings['OTHER_CFLAGS'] = ['$(inherited)', '-w', '-DOPENSSL_NO_ASM', '-DBORINGSSL_PREFIX=GRPC', '-Wno-shorten-64-to-32', '-Wno-deprecated']
-        config.build_settings['OTHER_CPLUSPLUSFLAGS'] = ['$(inherited)', '-w', '-DOPENSSL_NO_ASM', '-DBORINGSSL_PREFIX=GRPC', '-Wno-shorten-64-to-32', '-D_LIBCPP_ENABLE_CXX17_REMOVED_UNARY_FUNCTION=1']
-        
-        config.build_settings['WARNING_CFLAGS'] = ['-w']
-        
+        # Delete the legacy GCC flag if present
+        config.build_settings.delete 'GCC_WARN_INHIBIT_ALL_WARNINGS'
+
+        # Scrub from common flag buckets
+        %w[OTHER_CFLAGS OTHER_CPLUSPLUSFLAGS COMPILER_FLAGS].each do |key|
+          next unless config.build_settings[key]
+          if config.build_settings[key].is_a?(Array)
+            config.build_settings[key].reject! do |flag|
+              flag.to_s.include?('-GCC_WARN_INHIBIT_ALL_WARNINGS') || flag.to_s.strip == '-G'
+            end
+          elsif config.build_settings[key].is_a?(String)
+            config.build_settings[key] = config.build_settings[key]
+              .gsub(/-GCC_WARN_INHIBIT_ALL_WARNINGS/, '')
+              .gsub(/-G/, '')
+              .strip
+          end
+        end
+
+        # Per-file compiler flags cleanup (where it's often injected in older podspecs)
+        target.source_build_phase.files.each do |file|
+          next unless file.settings && file.settings['COMPILER_FLAGS']
+          flags = file.settings['COMPILER_FLAGS'].split(' ')
+          flags.reject! { |f| f == '-GCC_WARN_INHIBIT_ALL_WARNINGS' || f == '-G' }
+          file.settings['COMPILER_FLAGS'] = flags.join(' ')
+        end
+
+        # Ensure quiet + no profiling cruft
         config.build_settings['CLANG_ENABLE_CODE_COVERAGE'] = 'NO'
         config.build_settings['CLANG_COVERAGE_MAPPING'] = 'NO'
         config.build_settings['GENERATE_PROFILING_CODE'] = 'NO'
         config.build_settings['GCC_INSTRUMENT_PROGRAM_FLOW_ARCS'] = 'NO'
         config.build_settings['GCC_GENERATE_TEST_COVERAGE_FILES'] = 'NO'
-        
-        puts "🔧 BoringSSL-GRPC: Forcibly cleaned all flags"
+      end
+    end
+
+    # Optional: Silence symlink warnings without forcing always_execute
+    target.build_phases.each do |phase|
+      if phase.display_name == 'Create Symlinks to Header Folders'
+        phase.output_paths = ['$(DERIVED_FILE_DIR)/symlinks_done']  # fake output to suppress "run every time" warning
       end
     end
   end
 
-  # --- THE PHYSICAL FILE PATCHES ---
-  begin
-    pods_root = installer.sandbox.root
-    
-    # Patch Boost Hash
-    hash_header = File.join(pods_root, "boost/boost/container_hash/hash.hpp")
-    if File.exist?(hash_header)
-      puts "Nuclear Patch: Removing std::unary_function from Boost..."
-      File.chmod(0664, hash_header) rescue nil
-      content = File.read(hash_header)
-      new_content = content.gsub(/struct hash_base\s*:\s*std::unary_function<T,\s*std::size_t>\s*{};/, "struct hash_base {};")
-      File.open(hash_header, "w") { |f| f.puts new_content } if content != new_content
-    end
-
-    # Patch Folly Limits
-    json_cpp = File.join(pods_root, "RCT-Folly/folly/json.cpp")
-    if File.exist?(json_cpp)
-      puts "Nuclear Patch: Adding <limits> to Folly..."
-      File.chmod(0664, json_cpp) rescue nil
-      content = File.read(json_cpp)
-      unless content.include?("#include <limits>")
-        File.open(json_cpp, "w") { |f| f.puts "#include <limits>\n" + content }
-      end
-    end
-  rescue => e
-    puts "Warning: Patch failed: #{e.message}"
-  end
-
-  # --- THE FINAL XCCONFIG SCRUB ---
-  puts "--- RUNNING NUCLEAR -G SCRUB ON ALL XCCONFIGS ---"
-  Dir.glob(File.join(installer.sandbox.root, "**/*.xcconfig")).each do |file_path|
-    begin
-      content = File.read(file_path)
-      # Scrub EVERYTHING related to profiling from ALL xcconfigs
-      if content.include?("-G") || content.include?("instr-generate") || content.include?("coverage-mapping")
-        puts "Cleaning profiling flags from: #{File.basename(file_path)}"
-        File.chmod(0664, file_path) rescue nil
-        
-        # Remove -G
-        new_content = content.gsub(/(^|\s)-G(\s|$)/, ' ')
-        # Remove positive flags
-        new_content = new_content.gsub(/-fprofile-instr-generate/, ' ')
-        new_content = new_content.gsub(/-fcoverage-mapping/, ' ')
-        # Remove negative flags (to be safe for Swift)
-        new_content = new_content.gsub(/-fno-profile-instr-generate/, ' ')
-        new_content = new_content.gsub(/-fno-coverage-mapping/, ' ')
-        
-        # Iterative cleaning for multiple -G or leftovers
-        loop do
-          current = new_content
-          new_content = current.gsub(/(^|\s)-G(\s|$)/, ' ')
-          break if new_content == current
-        end
-        File.open(file_path, "w") { |f| f.puts new_content } if content != new_content
-      end
-    rescue => e
-      puts "Scrub failed for #{file_path}: #{e.message}"
-    end
+  # Optional: If you still see profiling flags sneaking in
+  installer.pods_project.build_configurations.each do |config|
+    config.build_settings['ENABLE_TESTABILITY'] = 'NO'
   end
 end
