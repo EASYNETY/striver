@@ -136,7 +136,7 @@ target 'StriverApp' do
 
 
       # Target problematic pods with merged community recommendations + our fixes
-      if ['BoringSSL-GRPC', 'RCT-Folly', 'gRPC-Core'].include?(target.name)
+      if ['BoringSSL-GRPC', 'RCT-Folly', 'gRPC-Core', 'gRPC-C++', 'abseil'].include?(target.name)
         target.build_configurations.each do |config|
           config.build_settings['OTHER_CFLAGS'] = [
             '$(inherited)', 
@@ -161,7 +161,6 @@ target 'StriverApp' do
           # Forcefully remove -G from these specific targets
           config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= ['$(inherited)']
           config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << '_LIBCPP_ENABLE_CXX17_REMOVED_UNARY_FUNCTION=1'
-          config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'].delete('-G') if config.build_settings['GCC_PREPROCESSOR_DEFINITIONS']
         end
       end
 
@@ -200,10 +199,15 @@ target 'StriverApp' do
       content = File.read(file_path)
       if content.include?("-G")
         puts "Cleaning ghost flag from: #{File.basename(file_path)}"
-        # Aggressive strip including leading/trailing spaces
-        new_content = content.gsub(/ -G /, ' ').gsub(/ -G$/, ' ').gsub(/^-G /, ' ').gsub(/^-G$/, ' ')
-        File.open(file_path, "w") { |f| f.puts new_content }
+        # Aggressive strip using a loop to catch multiple occurrences and various surrounds
+        loop do
+          new_content = content.gsub(/(^|\s)-G(\s|$)/, ' ')
+          break if new_content == content
+          content = new_content
+        end
+        File.open(file_path, "w") { |f| f.puts content }
       end
     end
+
   end
 end
