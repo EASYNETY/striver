@@ -132,9 +132,15 @@ post_install do |installer|
         # Force these to be COMPLETELY clean
         config.build_settings['OTHER_SWIFT_FLAGS'] = ['$(inherited)']
         config.build_settings['OTHER_CFLAGS'] = ['$(inherited)']
-        config.build_settings['SWIFT_OPTIMIZATION_LEVEL'] = '-Onone'
         config.build_settings['SWIFT_COMPILATION_MODE'] = 'wholemodule'
         config.build_settings['SWIFT_PROFILING'] = 'NO'
+        
+        # Only apply -Onone to Debug builds, let release builds use their default.
+        if config.name == 'Debug'
+          config.build_settings['SWIFT_OPTIMIZATION_LEVEL'] = '-Onone'
+        else # For Release or other custom configurations
+          config.build_settings['SWIFT_OPTIMIZATION_LEVEL'] = '-O'
+        end
       end
     end
 
