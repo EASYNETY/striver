@@ -44,8 +44,8 @@ jobs:
         run: |
           sed -i '' 's/\[settings setLinkDomain:linkDomain\];/\/\/ [settings setLinkDomain:linkDomain];/g' node_modules/@react-native-firebase/auth/ios/RNFBAuth/RNFBAuthModule.m
 
-      - name: Run React Native Doctor (iOS)
-        run: npx react-native doctor --fix-ios
+      - name: Run React Native Doctor
+        run: npx react-native doctor
 
       - name: Install CocoaPods
         run: |
