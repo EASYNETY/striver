@@ -144,6 +144,27 @@ target 'StriverApp' do
           config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'].delete('-G') if config.build_settings['GCC_PREPROCESSOR_DEFINITIONS']
         end
       end
+
+      # --- THE NUCLEAR PATCHES ---
+      # 1. Fix Boost unary_function for Xcode 16
+      hash_header = File.join(installer.sandbox.root, "boost/boost/container_hash/hash.hpp")
+      if File.exist?(hash_header)
+        puts "Patching Boost: removing std::unary_function..."
+        content = File.read(hash_header)
+        new_content = content.gsub(/struct hash_base\s*:\s*std::unary_function<T,\s*std::size_t>\s*{};/, "struct hash_base {};")
+        File.open(hash_header, "w") { |f| f.puts new_content }
+      end
+
+      # 2. Fix Folly json.cpp for Xcode 16
+      json_cpp = File.join(installer.sandbox.root, "RCT-Folly/folly/json.cpp")
+      if File.exist?(json_cpp)
+        puts "Patching Folly: adding missing includes..."
+        content = File.read(json_cpp)
+        unless content.include?("#include <limits>")
+          new_content = "#include <limits>\n" + content
+          File.open(json_cpp, "w") { |f| f.puts new_content }
+        end
+      end
     end
 
     # --- THE NUCLEAR SCRUB ---
