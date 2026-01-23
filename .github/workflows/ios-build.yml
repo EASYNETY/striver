@@ -44,10 +44,19 @@ jobs:
         run: |
           sed -i '' 's/\[settings setLinkDomain:linkDomain\];/\/\/ [settings setLinkDomain:linkDomain];/g' node_modules/@react-native-firebase/auth/ios/RNFBAuth/RNFBAuthModule.m
 
+      - name: Run React Native Doctor (iOS)
+        run: npx react-native doctor --fix-ios
+
       - name: Install CocoaPods
         run: |
           cd ios
-          pod install --repo-update
+          pod install --repo-update > pod_install_output.log 2>&1
+
+      - name: Upload pod install log
+        uses: actions/upload-artifact@v4
+        with:
+          name: pod-install-log
+          path: ios/pod_install_output.log
 
       - name: Build for Simulator
         run: |
