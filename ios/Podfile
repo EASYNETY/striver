@@ -151,6 +151,25 @@ post_install do |installer|
         config.build_settings['OTHER_CPLUSPLUSFLAGS'] << '-Wno-shorten-64-to-32' << '-D_LIBCPP_ENABLE_CXX17_REMOVED_UNARY_FUNCTION=1'
       end
     end
+
+    # === NUCLEAR OPTION FOR BORINGSSL-GRPC ===
+    if target.name == 'BoringSSL-GRPC'
+      target.build_configurations.each do |config|
+        # Completely override and rebuild the flags arrays
+        config.build_settings['OTHER_CFLAGS'] = ['$(inherited)', '-w', '-DOPENSSL_NO_ASM', '-DBORINGSSL_PREFIX=GRPC', '-Wno-shorten-64-to-32', '-Wno-deprecated']
+        config.build_settings['OTHER_CPLUSPLUSFLAGS'] = ['$(inherited)', '-w', '-DOPENSSL_NO_ASM', '-DBORINGSSL_PREFIX=GRPC', '-Wno-shorten-64-to-32', '-D_LIBCPP_ENABLE_CXX17_REMOVED_UNARY_FUNCTION=1']
+        
+        config.build_settings['WARNING_CFLAGS'] = ['-w']
+        
+        config.build_settings['CLANG_ENABLE_CODE_COVERAGE'] = 'NO'
+        config.build_settings['CLANG_COVERAGE_MAPPING'] = 'NO'
+        config.build_settings['GENERATE_PROFILING_CODE'] = 'NO'
+        config.build_settings['GCC_INSTRUMENT_PROGRAM_FLOW_ARCS'] = 'NO'
+        config.build_settings['GCC_GENERATE_TEST_COVERAGE_FILES'] = 'NO'
+        
+        puts "🔧 BoringSSL-GRPC: Forcibly cleaned all flags"
+      end
+    end
   end
 
   # --- THE PHYSICAL FILE PATCHES ---
