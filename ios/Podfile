@@ -13,12 +13,6 @@ $FirebaseSDKVersion = '10.28.0'
 install! 'cocoapods', :warn_for_unused_master_specs_repo => false
 prepare_react_native_project!
 
-# Enable modular headers for better module resolution in Xcode 16
-use_modular_headers!
-
-# Use static frameworks for Swift pods compatibility
-use_frameworks! :linkage => :static
-
 project 'StriverApp.xcodeproj'
 
 target 'StriverApp' do
