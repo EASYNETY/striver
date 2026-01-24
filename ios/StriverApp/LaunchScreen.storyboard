@@ -29,7 +29,6 @@
                             <constraint firstItem="Bcu-3y-fUS" firstAttribute="centerY" secondItem="GJd-Yh-RWb" secondAttribute="centerY" id="moa-c2-u7t"/>
                             <constraint firstItem="GJd-Yh-RWb" firstAttribute="leading" secondItem="Bcu-3y-fUS" secondAttribute="leading" symbolic="YES" id="x7j-FC-K8j"/>
                         </constraints>
-                        </constraints>
                         <viewLayoutGuide key="safeArea" id="Bcu-3y-fUS"/>
                     </view>
                 </viewController>
