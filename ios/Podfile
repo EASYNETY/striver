@@ -17,9 +17,6 @@ project 'StriverApp.xcodeproj'
 
 target 'StriverApp' do
   config = use_native_modules!
-  
-  # Enable modular headers for Swift pod compatibility
-  use_modular_headers!
 
   # Conditional Flipper configuration based on environment (React Native 0.75.4 compatible)
   flipper_config = ENV['NO_FLIPPER'] == "1" ? nil : nil
@@ -35,6 +32,15 @@ target 'StriverApp' do
   target 'StriverAppTests' do
     inherit! :complete
   end
+  
+  # Enable modular headers for specific Firebase/Google pods that need them
+  pod 'FirebaseCore', :modular_headers => true
+  pod 'FirebaseCoreExtension', :modular_headers => true
+  pod 'FirebaseFirestoreInternal', :modular_headers => true
+  pod 'GoogleUtilities', :modular_headers => true
+  pod 'FirebaseAppCheckInterop', :modular_headers => true
+  pod 'FirebaseAuthInterop', :modular_headers => true
+  pod 'FirebaseMessagingInterop', :modular_headers => true
 end
 
 post_install do |installer|
