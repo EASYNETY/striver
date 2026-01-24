@@ -28,6 +28,15 @@ target 'StriverApp' do
     :hermes_enabled => true,
     :fabric_enabled => false
   )
+  
+  # Enable modular headers for Firebase Swift pods
+  pod 'FirebaseCore', :modular_headers => true
+  pod 'FirebaseCoreExtension', :modular_headers => true
+  pod 'FirebaseAppCheckInterop', :modular_headers => true
+  pod 'FirebaseAuthInterop', :modular_headers => true
+  pod 'FirebaseMessagingInterop', :modular_headers => true
+  pod 'FirebaseFirestoreInternal', :modular_headers => true
+  pod 'GoogleUtilities', :modular_headers => true
 
   target 'StriverAppTests' do
     inherit! :complete
