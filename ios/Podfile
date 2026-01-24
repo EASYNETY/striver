@@ -44,10 +44,7 @@ post_install do |installer|
   # React Native required post-install (React Native 0.75.4 compatible)
   react_native_post_install(
     installer,
-    config[:reactNativePath],
-    :mac_catalyst_enabled => false,
-    # React Native 0.75.4 specific configurations
-    :ccache_enabled => ENV['USE_CCACHE'] == '1'
+    :mac_catalyst_enabled => false
   )
 
   installer.pods_project.targets.each do |target|
