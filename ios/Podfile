@@ -66,6 +66,7 @@ post_install do |installer|
         '$(inherited)',
         '"$(PODS_ROOT)/Headers/Public"',
         '"$(PODS_ROOT)/Headers/Private"',
+        '"$(PODS_ROOT)/Headers/Public/React-RCTAppDelegate"',
         '"$(PODS_ROOT)/Headers/Private/React-Core"',
         '"$(PODS_ROOT)/Headers/Private/React-RCTFabric"',
         '"$(PODS_ROOT)/Headers/Private/ReactCommon"',
