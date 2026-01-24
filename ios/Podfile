@@ -25,11 +25,10 @@ target 'StriverApp' do
   config = use_native_modules!
 
   # Conditional Flipper configuration based on environment (React Native 0.75.4 compatible)
-  flipper_config = ENV['NO_FLIPPER'] == "1" ? FlipperConfiguration.disabled : FlipperConfiguration.enabled(["Debug"], { 'Flipper' => '0.201.0' })
+  flipper_config = ENV['NO_FLIPPER'] == "1" ? nil : nil
 
   use_react_native!(
     :path => config[:reactNativePath],
-    :flipper_configuration => flipper_config,
     :app_path => "#{Pod::Config.instance.installation_root}/..",
     # React Native 0.75.4 specific configurations
     :hermes_enabled => true,
