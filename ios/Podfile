@@ -17,6 +17,9 @@ project 'StriverApp.xcodeproj'
 
 target 'StriverApp' do
   config = use_native_modules!
+  
+  # Enable modular headers for Swift pod compatibility
+  use_modular_headers!
 
   # Conditional Flipper configuration based on environment (React Native 0.75.4 compatible)
   flipper_config = ENV['NO_FLIPPER'] == "1" ? nil : nil
