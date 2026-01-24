@@ -1,1 +1,52 @@
-#import "AppDelegate.h"\n\n#import <React/RCTBundleURLProvider.h>\n#import <AuthenticationServices/AuthenticationServices.h>\n#import <SafariServices/SafariServices.h>\n#import <FBSDKCoreKit/FBSDKCoreKit.h>\n#import <Firebase.h>\n\n@implementation AppDelegate\n\n- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions\n{\n  [FIRApp configure];\n  [[FBSDKApplicationDelegate sharedInstance] application:application\n                           didFinishLaunchingWithOptions:launchOptions];\n\n  self.moduleName = @"StriverApp";\n  // You can add your custom initial props in the dictionary below.\n  // They will be passed down to the ViewController used by React Native.\n  self.initialProps = @{};\n\n  return [super application:application didFinishLaunchingWithOptions:launchOptions];\n}\n\n- (NSURL *)sourceURLForBridge:(RCTBridge *)bridge\n{\n  return [self getBundleURL];\n}\n\n- (NSURL *)getBundleURL\n{\n#if DEBUG\n  return [[RCTBundleURLProvider sharedSettings] jsBundleURLForBundleRoot:@"index"];\n#else\n  return [[NSBundle mainBundle] URLForResource:@"main" withExtension:@"jsbundle"];\n#endif\n}\n\n- (BOOL)application:(UIApplication *)app\n            openURL:(NSURL *)url\n            options:(NSDictionary<UIApplicationOpenURLOptionsKey,id> *)options\n{\n  if ([[FBSDKApplicationDelegate sharedInstance] application:app\n                                                      openURL:url\n                                                      options:options]) {\n    return YES;\n  }\n\n  return NO;\n}\n\n@end
+#import "AppDelegate.h"
+
+#import <React/RCTBundleURLProvider.h>
+#import <AuthenticationServices/AuthenticationServices.h>
+#import <SafariServices/SafariServices.h>
+#import <FBSDKCoreKit/FBSDKCoreKit.h>
+#import <Firebase.h>
+
+@implementation AppDelegate
+
+- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
+{
+  [FIRApp configure];
+  [[FBSDKApplicationDelegate sharedInstance] application:application
+                           didFinishLaunchingWithOptions:launchOptions];
+
+  self.moduleName = @"StriverApp";
+  // You can add your custom initial props in the dictionary below.
+  // They will be passed down to the ViewController used by React Native.
+  self.initialProps = @{};
+
+  return [super application:application didFinishLaunchingWithOptions:launchOptions];
+}
+
+- (NSURL *)sourceURLForBridge:(RCTBridge *)bridge
+{
+  return [self getBundleURL];
+}
+
+- (NSURL *)getBundleURL
+{
+#if DEBUG
+  return [[RCTBundleURLProvider sharedSettings] jsBundleURLForBundleRoot:@"index"];
+#else
+  return [[NSBundle mainBundle] URLForResource:@"main" withExtension:@"jsbundle"];
+#endif
+}
+
+- (BOOL)application:(UIApplication *)app
+            openURL:(NSURL *)url
+            options:(NSDictionary<UIApplicationOpenURLOptionsKey,id> *)options
+{
+  if ([[FBSDKApplicationDelegate sharedInstance] application:app
+                                                      openURL:url
+                                                      options:options]) {
+    return YES;
+  }
+
+  return NO;
+}
+
+@end
