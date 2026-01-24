@@ -10,7 +10,8 @@
     "test": "jest",
     "build:debug": "cd android && ./gradlew assembleDebug",
     "build:release": "cd android && ./gradlew assembleRelease",
-    "clean": "cd android && ./gradlew clean"
+    "clean": "cd android && ./gradlew clean",
+    "deploy:admin": "npm run build --prefix admin-panel && npx firebase-tools deploy --config firebase-new.json"
   },
   "dependencies": {
     "@invertase/react-native-apple-authentication": "^2.5.1",

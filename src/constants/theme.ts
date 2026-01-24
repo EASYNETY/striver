@@ -40,9 +40,9 @@ export const SPACING = {
 };
 
 export const FONTS = {
-    bold: 'Montserrat-Bold',
-    semiBold: 'Montserrat-SemiBold',
-    medium: 'Montserrat-Medium',
-    regular: 'Inter-Regular',
-    light: 'Inter-Light',
+    bold: 'Outfit-Bold',
+    semiBold: 'Outfit-SemiBold',
+    medium: 'Outfit-Medium',
+    regular: 'Outfit-Regular',
+    light: 'Outfit-Light',
 };

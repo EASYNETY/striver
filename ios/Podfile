@@ -7,7 +7,7 @@ require Pod::Executable.execute_command('node', ['-p',
     {paths: [process.argv[1]]},
   )', __dir__]).strip
 
-platform :ios, '15.1'
+platform :ios, min_ios_version_supported
 
 $FirebaseSDKVersion = '10.28.0'
 install! 'cocoapods', :warn_for_unused_master_specs_repo => false
@@ -24,10 +24,16 @@ project 'StriverApp.xcodeproj'
 target 'StriverApp' do
   config = use_native_modules!
 
+  # Conditional Flipper configuration based on environment (React Native 0.75.4 compatible)
+  flipper_config = ENV['NO_FLIPPER'] == "1" ? FlipperConfiguration.disabled : FlipperConfiguration.enabled(["Debug"], { 'Flipper' => '0.201.0' })
+
   use_react_native!(
     :path => config[:reactNativePath],
-    :flipper_configuration => FlipperConfiguration.disabled,
-    :app_path => "#{Pod::Config.instance.installation_root}/.."
+    :flipper_configuration => flipper_config,
+    :app_path => "#{Pod::Config.instance.installation_root}/..",
+    # React Native 0.75.4 specific configurations
+    :hermes_enabled => true,
+    :fabric_enabled => false
   )
 
   target 'StriverAppTests' do
@@ -36,17 +42,59 @@ target 'StriverApp' do
 end
 
 post_install do |installer|
-  # React Native required post-install (keep this)
+  # React Native required post-install (React Native 0.75.4 compatible)
   react_native_post_install(
     installer,
-    "../node_modules/react-native",
-    :mac_catalyst_enabled => false
+    config[:reactNativePath],
+    :mac_catalyst_enabled => false,
+    # React Native 0.75.4 specific configurations
+    :ccache_enabled => ENV['USE_CCACHE'] == '1'
   )
 
   installer.pods_project.targets.each do |target|
-    # Align deployment target everywhere (safe and prevents SDK mismatches)
+    # Align deployment target everywhere using min_ios_version_supported
     target.build_configurations.each do |config|
-      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.1'
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = min_ios_version_supported
+      
+      # React Native 0.75.4 compatibility settings
+      config.build_settings['ENABLE_USER_SCRIPT_SANDBOXING'] = 'NO'
+      config.build_settings['DEAD_CODE_STRIPPING'] = 'YES'
+      config.build_settings['LIBRARY_SEARCH_PATHS'] = [
+        '$(inherited)',
+        '"$(PODS_CONFIGURATION_BUILD_DIR)/React-hermes"',
+        '"$(PODS_CONFIGURATION_BUILD_DIR)/React-jsi"',
+        '"$(PODS_CONFIGURATION_BUILD_DIR)/React-jsiexecutor"',
+        '"$(PODS_CONFIGURATION_BUILD_DIR)/React-perflogger"',
+        '"$(PODS_CONFIGURATION_BUILD_DIR)/ReactCommon"',
+        '"$(PODS_CONFIGURATION_BUILD_DIR)/React-Fabric"',
+        '"$(PODS_CONFIGURATION_BUILD_DIR)/React-graphics"',
+        '"$(PODS_CONFIGURATION_BUILD_DIR)/React-utils"'
+      ]
+      
+      # Enhanced header search paths for React Native 0.75.4
+      config.build_settings['HEADER_SEARCH_PATHS'] = [
+        '$(inherited)',
+        '"$(PODS_ROOT)/Headers/Public"',
+        '"$(PODS_ROOT)/Headers/Private"',
+        '"$(PODS_ROOT)/Headers/Private/React-Core"',
+        '"$(PODS_ROOT)/Headers/Private/React-RCTFabric"',
+        '"$(PODS_ROOT)/Headers/Private/ReactCommon"',
+        '"$(PODS_ROOT)/Headers/Private/React-Fabric"',
+        '"$(PODS_ROOT)/Headers/Private/React-FabricImage"',
+        '"$(PODS_ROOT)/Headers/Private/React-graphics"',
+        '"$(PODS_ROOT)/Headers/Private/React-utils"',
+        '"$(PODS_ROOT)/Headers/Private/Yoga"'
+      ]
+      
+      # React Native 0.75.4 compiler settings
+      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] = [
+        '$(inherited)',
+        'FOLLY_NO_CONFIG',
+        'FOLLY_MOBILE=1',
+        'FOLLY_USE_LIBCPP=1',
+        'FOLLY_CFG_NO_COROUTINES=1',
+        'FOLLY_HAVE_CLOCK_GETTIME=1'
+      ]
     end
 
     # === Targeted fix ONLY for BoringSSL-GRPC ===
@@ -84,8 +132,8 @@ post_install do |installer|
         config.build_settings['GENERATE_PROFILING_CODE'] = 'NO'
         config.build_settings['GCC_INSTRUMENT_PROGRAM_FLOW_ARCS'] = 'NO'
         config.build_settings['GCC_GENERATE_TEST_COVERAGE_FILES'] = 'NO'
-        config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++20'   # or 'gnu++20'
-config.build_settings['CLANG_CXX_LIBRARY'] = 'libc++'
+        config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++20'
+        config.build_settings['CLANG_CXX_LIBRARY'] = 'libc++'
       end
     end
    
@@ -95,7 +143,29 @@ config.build_settings['CLANG_CXX_LIBRARY'] = 'libc++'
         config.build_settings['CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER'] = 'NO'
         config.build_settings['CLANG_WARN_DOCUMENTATION_COMMENTS'] = 'NO'
       end
-end
+    end
+
+    # React Native 0.75.4 specific optimizations
+    if target.name.start_with?('React-')
+      target.build_configurations.each do |config|
+        config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++20'
+        config.build_settings['CLANG_CXX_LIBRARY'] = 'libc++'
+        config.build_settings['COMPILER_INDEX_STORE_ENABLE'] = 'NO'
+        # Additional React Native 0.75.4 settings
+        config.build_settings['CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER'] = 'NO'
+        config.build_settings['CLANG_WARN_DOCUMENTATION_COMMENTS'] = 'NO'
+        config.build_settings['CLANG_WARN_STRICT_PROTOTYPES'] = 'NO'
+      end
+    end
+
+    # Firebase SDK 10.28.0 compatibility settings
+    if target.name.start_with?('Firebase') || target.name.start_with?('Google')
+      target.build_configurations.each do |config|
+        config.build_settings['CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER'] = 'NO'
+        config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
+        config.build_settings['CLANG_WARN_DOCUMENTATION_COMMENTS'] = 'NO'
+      end
+    end
 
     # Optional: Silence symlink warnings without forcing always_execute
     target.build_phases.each do |phase|
@@ -105,8 +175,21 @@ end
     end
   end
 
-  # Optional: If you still see profiling flags sneaking in
+  # React Native 0.75.4 project-level optimizations
   installer.pods_project.build_configurations.each do |config|
     config.build_settings['ENABLE_TESTABILITY'] = 'NO'
+    config.build_settings['ONLY_ACTIVE_ARCH'] = config.name == 'Debug' ? 'YES' : 'NO'
+    config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64' if config.name == 'Debug'
+    # Additional React Native 0.75.4 project settings
+    config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++20'
+    config.build_settings['CLANG_CXX_LIBRARY'] = 'libc++'
+    config.build_settings['ENABLE_BITCODE'] = 'NO'
+    config.build_settings['OTHER_CPLUSPLUSFLAGS'] = [
+      '$(inherited)',
+      '-DFOLLY_NO_CONFIG',
+      '-DFOLLY_MOBILE=1',
+      '-DFOLLY_USE_LIBCPP=1',
+      '-DFOLLY_CFG_NO_COROUTINES=1'
+    ]
   end
 end

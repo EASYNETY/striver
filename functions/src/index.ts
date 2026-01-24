@@ -235,3 +235,4 @@ export const updatePasswordWithOTP = onCall(async (request: any) => {
 
 // Video Handling Functions (Cloudflare Stream Migration)
 export * from './videos/upload';
+export * from './admin';
