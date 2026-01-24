@@ -28,15 +28,6 @@ target 'StriverApp' do
     :hermes_enabled => true,
     :fabric_enabled => false
   )
-  
-  # Enable modular headers for Firebase Swift pods
-  pod 'FirebaseCore', :modular_headers => true
-  pod 'FirebaseCoreExtension', :modular_headers => true
-  pod 'FirebaseAppCheckInterop', :modular_headers => true
-  pod 'FirebaseAuthInterop', :modular_headers => true
-  pod 'FirebaseMessagingInterop', :modular_headers => true
-  pod 'FirebaseFirestoreInternal', :modular_headers => true
-  pod 'GoogleUtilities', :modular_headers => true
 
   target 'StriverAppTests' do
     inherit! :complete
@@ -164,6 +155,7 @@ post_install do |installer|
         config.build_settings['CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER'] = 'NO'
         config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
         config.build_settings['CLANG_WARN_DOCUMENTATION_COMMENTS'] = 'NO'
+        config.build_settings['DEFINES_MODULE'] = 'YES'
       end
     end
 
