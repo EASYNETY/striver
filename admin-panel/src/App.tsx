@@ -54,22 +54,43 @@ import Login from './Login';
  */
 const safeCall = async (fnName: string, data: any = {}) => {
   try {
-    const fn = httpsCallable(functions, fnName);
-    const res: any = await fn(data);
-    return res.data;
+    const endpoints: Record<string, string> = {
+      // Direct REST endpoints removed as they are not configured in Vite proxy.
+      // Fallback will use Firebase HttpsCallable SDK.
+    };
+
+    const endpoint = endpoints[fnName];
+
+    // Fallback to SDK if no mapped endpoint (graceful degradation)
+    if (!endpoint) {
+      const fn = httpsCallable(functions, fnName);
+      const res: any = await fn(data);
+      return res.data;
+    }
+
+    const idToken = await auth.currentUser?.getIdToken();
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${idToken}`
+      },
+      body: JSON.stringify({ data })
+    });
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    return json.result;
   } catch (err: any) {
     console.warn(`[SafeCall] Function ${fnName} failed:`, err.message);
 
-    // Provide intelligent mock fallback to keep the UI alive during deployment/cors issues
     if (fnName === 'getPlatformStats') {
       return {
         totalUsers: '0 (Syncing)',
         totalVideos: '0',
         pendingVideos: '0',
         totalSquads: '0',
-        activityGoo: [
-          { name: '...', active: 0 }
-        ]
+        activityGoo: [{ name: '...', active: 0 }]
       };
     }
     throw err;
