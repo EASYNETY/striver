@@ -3,18 +3,18 @@ import * as admin from 'firebase-admin';
 
 // Initialize Admin for the module
 if (admin.apps.length === 0) admin.initializeApp();
-const db = admin.firestore();
+
+// Lazy getter for DB to avoid top-level overhead
+const getDb = () => admin.firestore();
 
 /**
  * Check if caller is admin
  */
 async function checkAdmin(auth: any) {
     if (!auth) throw new HttpsError('unauthenticated', 'Login required.');
-
-    // Skip check for mock dev user
     if (auth.uid === 'admin-mock-id') return;
 
-    const userDoc = await db.collection('users').doc(auth.uid).get();
+    const userDoc = await getDb().collection('users').doc(auth.uid).get();
     const userData = userDoc.data();
 
     if (!userData || (userData.role !== 'admin' && userData.role !== 'super_admin')) {
@@ -37,8 +37,8 @@ export const updateUserRole = onCall({ cors: true }, async (request) => {
         updates.badge_status = 'gold';
     }
 
-    await db.collection('users').doc(targetUid).update(updates);
-    await db.collection('admin_logs').add({
+    await getDb().collection('users').doc(targetUid).update(updates);
+    await getDb().collection('admin_logs').add({
         type: 'role_change',
         details: `Subject ${targetUid} promoted to ${role.toUpperCase()}`,
         timestamp: admin.firestore.FieldValue.serverTimestamp()
@@ -50,13 +50,13 @@ export const moderateVideo = onCall({ cors: true }, async (request) => {
     await checkAdmin(request.auth);
     const { videoId, status, feedback } = request.data;
 
-    await db.collection('posts').doc(videoId).update({
+    await getDb().collection('posts').doc(videoId).update({
         status,
         moderatedAt: admin.firestore.FieldValue.serverTimestamp(),
         moderatorFeedback: feedback || ''
     });
 
-    await db.collection('admin_logs').add({
+    await getDb().collection('admin_logs').add({
         type: 'moderation',
         details: `Asset ${videoId} status set to ${status.toUpperCase()}`,
         timestamp: admin.firestore.FieldValue.serverTimestamp()
@@ -68,12 +68,12 @@ export const verifyParentPicture = onCall({ cors: true }, async (request) => {
     await checkAdmin(request.auth);
     const { userId, isVerified } = request.data;
 
-    await db.collection('users').doc(userId).update({
+    await getDb().collection('users').doc(userId).update({
         parentPictureVerified: isVerified,
         verifiedAt: isVerified ? admin.firestore.FieldValue.serverTimestamp() : null
     });
 
-    await db.collection('admin_logs').add({
+    await getDb().collection('admin_logs').add({
         type: 'verification',
         details: `Security check for ${userId}: ${isVerified ? 'PASSED' : 'FAILED'}`,
         timestamp: admin.firestore.FieldValue.serverTimestamp()
@@ -85,10 +85,13 @@ export const getPlatformStats = onCall({ cors: true }, async (request) => {
     await checkAdmin(request.auth);
 
     try {
-        const usersSnap = await db.collection('users').count().get();
-        const postsSnap = await db.collection('posts').count().get();
-        const pendingSnap = await db.collection('posts').where('status', '==', 'pending').count().get();
-        const squadsSnap = await db.collection('squads').count().get();
+        const db = getDb();
+        const [usersSnap, postsSnap, pendingSnap, squadsSnap] = await Promise.all([
+            db.collection('users').count().get(),
+            db.collection('posts').count().get(),
+            db.collection('posts').where('status', '==', 'pending').count().get(),
+            db.collection('squads').count().get()
+        ]);
 
         const totalUsers = usersSnap.data().count;
 
@@ -108,7 +111,6 @@ export const getPlatformStats = onCall({ cors: true }, async (request) => {
             ]
         };
     } catch (err) {
-        // Fallback to avoid complete failure if counts error
         return {
             totalUsers: 0,
             totalVideos: 0,

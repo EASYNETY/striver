@@ -19,43 +19,42 @@ service cloud.firestore {
     function isParentOf(childId) {
       return get(/databases/$(database)/documents/users/$(childId)).data.parentUid == request.auth.uid;
     }
-    
-    function isUnder13(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data.ageTier == '4_12';
+
+    function isAdmin() {
+      return isSignedIn() && (getUserData().role == 'admin' || getUserData().role == 'super_admin');
     }
 
     // Users Collection
     match /users/{userId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && isOwner(userId);
-      allow update: if isSignedIn() && (isOwner(userId) || isParentOf(userId));
-      allow delete: if false; // Deletion via Cloud Function only
+      allow update: if isSignedIn() && (isOwner(userId) || isParentOf(userId) || isAdmin());
+      allow delete: if isAdmin();
     }
 
-    // Videos Collection
+    // Posts Collection
+    match /posts/{postId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
     match /videos/{videoId} {
-      allow read: if isSignedIn() && (!isUnder13(resource.data.creatorUid) || resource.data.status == 'approved');
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && (isOwner(resource.data.creatorUid) || isParentOf(resource.data.creatorUid));
-      allow delete: if isSignedIn() && isOwner(resource.data.creatorUid);
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Admin Logs
+    match /admin_logs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false; 
     }
 
     // Squads Collection
     match /squads/{squadId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && getUserData().ageTier == '18_plus';
-      allow update: if isSignedIn() && isOwner(resource.data.creatorUid);
-    }
-
-    // Transactions
-    match /transactions/{id} {
-      allow read: if isSignedIn() && (isOwner(resource.data.uid) || isParentOf(resource.data.uid));
-      allow write: if false; // Managed by Cloud Functions (Stripe)
-    }
-
-    // Moderation Queue
-    match /moderationQueue/{id} {
-      allow read, write: if false; // Employee only (via Admin SDK/Portal)
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (isOwner(resource.data.creatorUid) || isAdmin());
+      allow delete: if isAdmin();
     }
   }
 }

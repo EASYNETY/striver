@@ -1,55 +1,39 @@
-
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import * as admin from 'firebase-admin';
 import axios from 'axios';
 
-// Initialize Firebase Admin if not already initialized
+// Initialize Admin
 if (!admin.apps.length) {
     admin.initializeApp();
 }
 
-/**
- * Generate a direct upload URL for Cloudflare Stream
- * This allows the mobile app to upload directly to Cloudflare without hitting our server
- */
+const getDb = () => admin.firestore();
+
 export const getUploadUrl = onCall(async (request) => {
-    // 1. Verify Authentication
     if (!request.auth) {
-        throw new HttpsError(
-            'unauthenticated',
-            'The function must be called while authenticated.'
-        );
+        throw new HttpsError('unauthenticated', 'The function must be called while authenticated.');
     }
 
     const uid = request.auth.uid;
-    // Use legacy config for now as per user environment setup
-    const config = require('firebase-functions').config();
+    const functions = require('firebase-functions');
+    const config = functions.config();
     const accountId = config.cloudflare?.account_id;
     const apiToken = config.cloudflare?.api_token;
 
-    // 2. Validate Configuration
     if (!accountId || !apiToken) {
         console.error('Missing Cloudflare Configuration');
-        throw new HttpsError(
-            'internal',
-            'Server configuration error: Missing Cloudflare credentials.'
-        );
+        throw new HttpsError('internal', 'Server configuration error');
     }
 
     try {
-        // 3. Request Upload URL from Cloudflare
-        // Docs: https://developers.cloudflare.com/stream/uploading-videos/direct-creator-uploads/
         const response = await axios.post(
             `https://api.cloudflare.com/client/v4/accounts/${accountId}/stream/direct_upload`,
             {
-                maxDurationSeconds: 300, // 5 minutes limit
-                expiry: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // URL expires in 30 mins
-                requireSignedURLs: false, // Videos are public by default for feed
-                creator: uid, // Tag with user ID
-                meta: {
-                    userId: uid,
-                    platform: 'striver-app'
-                }
+                maxDurationSeconds: 300,
+                expiry: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+                requireSignedURLs: false,
+                creator: uid,
+                meta: { userId: uid, platform: 'striver-app' }
             },
             {
                 headers: {
@@ -60,64 +44,41 @@ export const getUploadUrl = onCall(async (request) => {
         );
 
         const { uploadURL, uid: videoId } = response.data.result;
-
-        // 4. Return the secure URL to the client
-        return {
-            uploadUrl: uploadURL,
-            videoId: videoId
-        };
+        return { uploadUrl: uploadURL, videoId: videoId };
 
     } catch (error: any) {
-        console.error('Cloudflare Upload URL Error:', error?.response?.data || error.message);
-        throw new HttpsError(
-            'unavailable',
-            'Failed to generate upload URL. Please try again.'
-        );
+        console.error('Cloudflare Error:', error?.response?.data || error.message);
+        throw new HttpsError('unavailable', 'Failed to generate upload URL.');
     }
 });
 
-/**
- * Handle successful video upload completion
- * Called by the app after the file is fully uploaded to Cloudflare
- */
 export const completeUpload = onCall(async (request) => {
-    // 1. Verify Authentication
-    if (!request.auth) {
-        throw new HttpsError('unauthenticated', 'User must be logged in.');
-    }
+    if (!request.auth) throw new HttpsError('unauthenticated', 'User must be logged in.');
 
     const { videoId, caption, hashtags, location, challengeId } = request.data;
     const uid = request.auth.uid;
-    const config = require('firebase-functions').config();
+    const functions = require('firebase-functions');
+    const config = functions.config();
     const accountId = config.cloudflare?.account_id;
     const apiToken = config.cloudflare?.api_token;
 
-    if (!videoId) {
-        throw new HttpsError('invalid-argument', 'Missing videoId');
-    }
+    if (!videoId) throw new HttpsError('invalid-argument', 'Missing videoId');
 
     try {
-        // 2. Fetch Video Details from Cloudflare (to get thumbnail & HLS url)
         const response = await axios.get(
             `https://api.cloudflare.com/client/v4/accounts/${accountId}/stream/${videoId}`,
-            {
-                headers: {
-                    'Authorization': `Bearer ${apiToken}`
-                }
-            }
+            { headers: { 'Authorization': `Bearer ${apiToken}` } }
         );
 
         const videoData = response.data.result;
-
-        // 3. Store Metadata in Firestore
         const postData = {
             userId: uid,
             videoId: videoId,
-            videoUrl: videoData.playback.hls, // The HLS streaming URL
-            thumbnail: videoData.thumbnail, // Default thumbnail
-            previewGif: videoData.preview, // Short preview GIF
+            videoUrl: videoData.playback.hls,
+            thumbnail: videoData.thumbnail,
+            previewGif: videoData.preview,
             duration: videoData.duration,
-            status: videoData.status.state, // e.g., 'ready', 'processing'
+            status: videoData.status.state,
             caption: caption || '',
             hashtags: hashtags || [],
             location: location || null,
@@ -129,10 +90,9 @@ export const completeUpload = onCall(async (request) => {
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
         };
 
-        const postRef = await admin.firestore().collection('posts').add(postData);
+        const postRef = await getDb().collection('posts').add(postData);
 
-        // 4. Update User's Video Count
-        await admin.firestore().collection('users').doc(uid).update({
+        await getDb().collection('users').doc(uid).update({
             postsCount: admin.firestore.FieldValue.increment(1)
         });
 
@@ -144,28 +104,23 @@ export const completeUpload = onCall(async (request) => {
     }
 });
 
-/**
- * Fetch HLS-optimized Home Feed
- * Returns videos that are fully processed and ready to stream
- */
 export const getHomeFeed = onCall(async (request) => {
     try {
         const { lastId, limit = 10 } = request.data;
-        let query = admin.firestore()
-            .collection('posts')
-            .where('status', '==', 'ready') // Only show processed videos
+        let query: any = getDb().collection('posts')
+            .where('status', '==', 'ready')
             .orderBy('createdAt', 'desc')
             .limit(limit);
 
         if (lastId) {
-            const lastDoc = await admin.firestore().collection('posts').doc(lastId).get();
+            const lastDoc = await getDb().collection('posts').doc(lastId).get();
             if (lastDoc.exists) {
                 query = query.startAfter(lastDoc);
             }
         }
 
         const snapshot = await query.get();
-        const posts = snapshot.docs.map(doc => ({
+        const posts = snapshot.docs.map((doc: any) => ({
             id: doc.id,
             ...doc.data()
         }));

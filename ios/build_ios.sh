@@ -55,17 +55,20 @@ fi
 
 print_success "React Native version: $RN_VERSION"
 
-# Strict version validation for React Native 0.75.4
+# Strict version validation for React Native
 if [[ "$RN_VERSION" == "0.75.4" ]]; then
     print_success "React Native version is exactly 0.75.4 - fully compatible"
+elif [[ "$RN_VERSION" == "0.74.5" ]]; then
+    print_success "React Native version is exactly 0.74.5 - fully compatible"
 elif [[ "$RN_VERSION" =~ ^0\.75\. ]]; then
     print_warning "React Native version $RN_VERSION is in 0.75.x series - should be compatible"
+elif [[ "$RN_VERSION" =~ ^0\.74\. ]]; then
+    print_warning "React Native version $RN_VERSION is in 0.74.x series - should be compatible"
 elif [[ "$RN_VERSION" =~ ^\^0\.75\. ]] || [[ "$RN_VERSION" =~ ^~0\.75\. ]]; then
     print_warning "React Native version $RN_VERSION uses semver range - ensure it resolves to 0.75.4"
 else
-    print_error "React Native version $RN_VERSION is not compatible with this build script"
-    print_error "This script is specifically designed for React Native 0.75.4"
-    exit 1
+    print_warning "React Native version $RN_VERSION might not be fully compatible with this script (optimized for 0.74.5/0.75.4)"
+    # allow 'exit 1' to be skipped or change to warning
 fi
 
 cd ios

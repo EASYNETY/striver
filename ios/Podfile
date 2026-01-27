@@ -8,189 +8,52 @@ require Pod::Executable.execute_command('node', ['-p',
   )', __dir__]).strip
 
 platform :ios, min_ios_version_supported
-
-$FirebaseSDKVersion = '10.28.0'
-install! 'cocoapods', :warn_for_unused_master_specs_repo => false
 prepare_react_native_project!
 
-project 'StriverApp.xcodeproj'
+$RNFirebaseAsStaticFramework = true
+use_frameworks! :linkage => :static
 
 target 'StriverApp' do
   config = use_native_modules!
-
-  # Conditional Flipper configuration based on environment (React Native 0.75.4 compatible)
-  flipper_config = ENV['NO_FLIPPER'] == "1" ? nil : nil
+  
+  # React Native Firebase
+  pod 'Firebase', :modular_headers => true
+  pod 'FirebaseCore', :modular_headers => true
+  pod 'GoogleUtilities', :modular_headers => true
+  
+  # Manually link Firebase modules (Autolinking failsafe)
+  pod 'RNFBApp', :path => '../node_modules/@react-native-firebase/app'
+  pod 'RNFBAuth', :path => '../node_modules/@react-native-firebase/auth'
+  pod 'RNFBAnalytics', :path => '../node_modules/@react-native-firebase/analytics'
+  pod 'RNFBFirestore', :path => '../node_modules/@react-native-firebase/firestore'
+  pod 'RNFBStorage', :path => '../node_modules/@react-native-firebase/storage'
+  pod 'RNFBFunctions', :path => '../node_modules/@react-native-firebase/functions'
+  
+  # Manually link Google Sign In
+  pod 'RNGoogleSignin', :path => '../node_modules/@react-native-google-signin/google-signin'
 
   use_react_native!(
     :path => config[:reactNativePath],
-    :app_path => "#{Pod::Config.instance.installation_root}/..",
-    # React Native 0.75.4 specific configurations
     :hermes_enabled => true,
-    :fabric_enabled => false
+    :fabric_enabled => false,
+    :new_arch_enabled => false
   )
 
   target 'StriverAppTests' do
     inherit! :complete
   end
-  
-  # Enable modular headers for specific Firebase/Google pods that need them
-  pod 'FirebaseCore', :modular_headers => true
-  pod 'FirebaseCoreExtension', :modular_headers => true
-  pod 'FirebaseFirestoreInternal', :modular_headers => true
-  pod 'GoogleUtilities', :modular_headers => true
-  pod 'FirebaseAppCheckInterop', :modular_headers => true
-  pod 'FirebaseAuthInterop', :modular_headers => true
-  pod 'FirebaseMessagingInterop', :modular_headers => true
 end
 
 post_install do |installer|
-  # React Native required post-install (React Native 0.75.4 compatible)
   react_native_post_install(
     installer,
     :mac_catalyst_enabled => false
   )
-
+  
   installer.pods_project.targets.each do |target|
-    # Align deployment target everywhere using min_ios_version_supported
     target.build_configurations.each do |config|
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = min_ios_version_supported
-      
-      # React Native 0.75.4 compatibility settings
       config.build_settings['ENABLE_USER_SCRIPT_SANDBOXING'] = 'NO'
-      config.build_settings['DEAD_CODE_STRIPPING'] = 'YES'
-      config.build_settings['LIBRARY_SEARCH_PATHS'] = [
-        '$(inherited)',
-        '"$(PODS_CONFIGURATION_BUILD_DIR)/React-hermes"',
-        '"$(PODS_CONFIGURATION_BUILD_DIR)/React-jsi"',
-        '"$(PODS_CONFIGURATION_BUILD_DIR)/React-jsiexecutor"',
-        '"$(PODS_CONFIGURATION_BUILD_DIR)/React-perflogger"',
-        '"$(PODS_CONFIGURATION_BUILD_DIR)/ReactCommon"',
-        '"$(PODS_CONFIGURATION_BUILD_DIR)/React-Fabric"',
-        '"$(PODS_CONFIGURATION_BUILD_DIR)/React-graphics"',
-        '"$(PODS_CONFIGURATION_BUILD_DIR)/React-utils"'
-      ]
-      
-      # Enhanced header search paths for React Native 0.75.4
-      config.build_settings['HEADER_SEARCH_PATHS'] = [
-        '$(inherited)',
-        '"$(PODS_ROOT)/Headers/Public"',
-        '"$(PODS_ROOT)/Headers/Private"',
-        '"$(PODS_ROOT)/Headers/Public/React-RCTAppDelegate"',
-        '"$(PODS_ROOT)/Headers/Private/React-Core"',
-        '"$(PODS_ROOT)/Headers/Private/React-RCTFabric"',
-        '"$(PODS_ROOT)/Headers/Private/ReactCommon"',
-        '"$(PODS_ROOT)/Headers/Private/React-Fabric"',
-        '"$(PODS_ROOT)/Headers/Private/React-FabricImage"',
-        '"$(PODS_ROOT)/Headers/Private/React-graphics"',
-        '"$(PODS_ROOT)/Headers/Private/React-utils"',
-        '"$(PODS_ROOT)/Headers/Private/Yoga"'
-      ]
-      
-      # React Native 0.75.4 compiler settings
-      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] = [
-        '$(inherited)',
-        'FOLLY_NO_CONFIG',
-        'FOLLY_MOBILE=1',
-        'FOLLY_USE_LIBCPP=1',
-        'FOLLY_CFG_NO_COROUTINES=1',
-        'FOLLY_HAVE_CLOCK_GETTIME=1'
-      ]
     end
-
-    # === Targeted fix ONLY for BoringSSL-GRPC ===
-    if target.name == 'BoringSSL-GRPC'
-      target.build_configurations.each do |config|
-        # Delete the legacy GCC flag if present
-        config.build_settings.delete 'GCC_WARN_INHIBIT_ALL_WARNINGS'
-
-        # Scrub from common flag buckets
-        %w[OTHER_CFLAGS OTHER_CPLUSPLUSFLAGS COMPILER_FLAGS].each do |key|
-          next unless config.build_settings[key]
-          if config.build_settings[key].is_a?(Array)
-            config.build_settings[key].reject! do |flag|
-              flag.to_s.include?('-GCC_WARN_INHIBIT_ALL_WARNINGS') || flag.to_s.strip == '-G'
-            end
-          elsif config.build_settings[key].is_a?(String)
-            config.build_settings[key] = config.build_settings[key]
-              .gsub(/-GCC_WARN_INHIBIT_ALL_WARNINGS/, '')
-              .gsub(/-G/, '')
-              .strip
-          end
-        end
-
-        # Per-file compiler flags cleanup (where it's often injected in older podspecs)
-        target.source_build_phase.files.each do |file|
-          next unless file.settings && file.settings['COMPILER_FLAGS']
-          flags = file.settings['COMPILER_FLAGS'].split(' ')
-          flags.reject! { |f| f == '-GCC_WARN_INHIBIT_ALL_WARNINGS' || f == '-G' }
-          file.settings['COMPILER_FLAGS'] = flags.join(' ')
-        end
-
-        # Ensure quiet + no profiling cruft
-        config.build_settings['CLANG_ENABLE_CODE_COVERAGE'] = 'NO'
-        config.build_settings['CLANG_COVERAGE_MAPPING'] = 'NO'
-        config.build_settings['GENERATE_PROFILING_CODE'] = 'NO'
-        config.build_settings['GCC_INSTRUMENT_PROGRAM_FLOW_ARCS'] = 'NO'
-        config.build_settings['GCC_GENERATE_TEST_COVERAGE_FILES'] = 'NO'
-        config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++20'
-        config.build_settings['CLANG_CXX_LIBRARY'] = 'libc++'
-      end
-    end
-   
-    if target.name == 'RCT-Folly'
-      target.build_configurations.each do |config|
-        config.build_settings['GCC_WARN_INHIBIT_ALL_WARNINGS'] = 'YES'   # quiet warnings
-        config.build_settings['CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER'] = 'NO'
-        config.build_settings['CLANG_WARN_DOCUMENTATION_COMMENTS'] = 'NO'
-      end
-    end
-
-    # React Native 0.75.4 specific optimizations
-    if target.name.start_with?('React-')
-      target.build_configurations.each do |config|
-        config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++20'
-        config.build_settings['CLANG_CXX_LIBRARY'] = 'libc++'
-        config.build_settings['COMPILER_INDEX_STORE_ENABLE'] = 'NO'
-        # Additional React Native 0.75.4 settings
-        config.build_settings['CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER'] = 'NO'
-        config.build_settings['CLANG_WARN_DOCUMENTATION_COMMENTS'] = 'NO'
-        config.build_settings['CLANG_WARN_STRICT_PROTOTYPES'] = 'NO'
-      end
-    end
-
-    # Firebase SDK 10.28.0 compatibility settings
-    if target.name.start_with?('Firebase') || target.name.start_with?('Google')
-      target.build_configurations.each do |config|
-        config.build_settings['CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER'] = 'NO'
-        config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
-        config.build_settings['CLANG_WARN_DOCUMENTATION_COMMENTS'] = 'NO'
-        config.build_settings['DEFINES_MODULE'] = 'YES'
-      end
-    end
-
-    # Optional: Silence symlink warnings without forcing always_execute
-    target.build_phases.each do |phase|
-      if phase.display_name == 'Create Symlinks to Header Folders'
-        phase.output_paths = ['$(DERIVED_FILE_DIR)/symlinks_done']  # fake output to suppress "run every time" warning
-      end
-    end
-  end
-
-  # React Native 0.75.4 project-level optimizations
-  installer.pods_project.build_configurations.each do |config|
-    config.build_settings['ENABLE_TESTABILITY'] = 'NO'
-    config.build_settings['ONLY_ACTIVE_ARCH'] = config.name == 'Debug' ? 'YES' : 'NO'
-    config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64' if config.name == 'Debug'
-    # Additional React Native 0.75.4 project settings
-    config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++20'
-    config.build_settings['CLANG_CXX_LIBRARY'] = 'libc++'
-    config.build_settings['ENABLE_BITCODE'] = 'NO'
-    config.build_settings['OTHER_CPLUSPLUSFLAGS'] = [
-      '$(inherited)',
-      '-DFOLLY_NO_CONFIG',
-      '-DFOLLY_MOBILE=1',
-      '-DFOLLY_USE_LIBCPP=1',
-      '-DFOLLY_CFG_NO_COROUTINES=1'
-    ]
   end
 end
