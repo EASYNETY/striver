@@ -2,6 +2,10 @@ name: Build Android
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
   build:
@@ -14,35 +18,63 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
           cache: 'npm'
 
       - name: Install NPM Dependencies
-        run: npm install
+        run: npm ci
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
-          distribution: 'zulu'
+          distribution: 'temurin'
+          cache: 'gradle'
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Build Release APK
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Make gradlew executable
+        run: chmod +x android/gradlew
+
+      - name: Build Debug APK
+        run: |
+          cd android
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Build Release APK (if secrets available)
+        if: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 != '' }}
         run: |
           cd android
           # Create the keystore file from base64 secret
           echo "${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}" | base64 --decode > app/striver-upload-key.keystore
-          chmod +x gradlew
-          ./gradlew assembleRelease \
+          ./gradlew assembleRelease --no-daemon --stacktrace \
             -PMYAPP_UPLOAD_STORE_FILE=striver-upload-key.keystore \
             -PMYAPP_UPLOAD_STORE_PASSWORD=${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD }} \
             -PMYAPP_UPLOAD_KEY_ALIAS=${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }} \
             -PMYAPP_UPLOAD_KEY_PASSWORD=${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
 
-      - name: Upload APK
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+      - name: Upload Release APK
+        if: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: app-release
           path: android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: warn

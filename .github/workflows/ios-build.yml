@@ -1,14 +1,16 @@
 name: Build iOS
 
 on:
-  workflow_dispatch: # Allows manual trigger
+  workflow_dispatch:
   push:
+    branches: [ main ]
+  pull_request:
     branches: [ main ]
 
 jobs:
   build:
     name: Build iOS App
-    runs-on: macos-latest
+    runs-on: macos-14
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -20,59 +22,100 @@ jobs:
           cache: 'npm'
 
       - name: Install NPM Dependencies
-        run: npm install
-
-      - name: Cache CocoaPods
-        uses: actions/cache@v4
-        with:
-          path: ios/Pods
-          key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pods-
+        run: npm ci
 
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.2'
           bundler-cache: true
+          working-directory: ios
+
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: |
+            ios/Pods
+            ~/Library/Caches/CocoaPods
+            ~/.cocoapods
+          key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pods-
 
       - name: Patch Boost Podspec (Fix 404)
         run: |
-          sed -i '' 's|https://boostorg.jfrog.io/artifactory/main/release/1.83.0/source/boost_1_83_0.tar.bz2|https://archives.boost.io/release/1.83.0/source/boost_1_83_0.tar.bz2|g' node_modules/react-native/third-party-podspecs/boost.podspec
+          if [ -f "node_modules/react-native/third-party-podspecs/boost.podspec" ]; then
+            sed -i '' 's|https://boostorg.jfrog.io/artifactory/main/release/1.83.0/source/boost_1_83_0.tar.bz2|https://archives.boost.io/release/1.83.0/source/boost_1_83_0.tar.bz2|g' node_modules/react-native/third-party-podspecs/boost.podspec
+            echo "✅ Boost podspec patched"
+          else
+            echo "⚠️ Boost podspec not found, skipping patch"
+          fi
 
       - name: Patch Firebase Auth (Fix setLinkDomain)
         run: |
-          sed -i '' 's/\[settings setLinkDomain:linkDomain\];/\/\/ [settings setLinkDomain:linkDomain];/g' node_modules/@react-native-firebase/auth/ios/RNFBAuth/RNFBAuthModule.m
+          if [ -f "node_modules/@react-native-firebase/auth/ios/RNFBAuth/RNFBAuthModule.m" ]; then
+            sed -i '' 's/\[settings setLinkDomain:linkDomain\];/\/\/ [settings setLinkDomain:linkDomain];/g' node_modules/@react-native-firebase/auth/ios/RNFBAuth/RNFBAuthModule.m
+            echo "✅ Firebase Auth patched"
+          else
+            echo "⚠️ Firebase Auth file not found, skipping patch"
+          fi
 
-      - name: Run React Native Doctor
-        run: npx react-native doctor
-
-      - name: Install CocoaPods
+      - name: Install CocoaPods Dependencies
         run: |
           cd ios
-          pod install --repo-update > pod_install_output.log 2>&1
+          pod install --repo-update 2>&1 | tee pod_install_output.log
+        continue-on-error: false
 
-      - name: Upload pod install log
+      - name: Upload Pod Install Log
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: pod-install-log
           path: ios/pod_install_output.log
+          if-no-files-found: warn
 
-      - name: Build for Simulator
+      - name: Build for Simulator (Debug)
         run: |
           xcodebuild -workspace ios/StriverApp.xcworkspace \
                      -scheme StriverApp \
-                     -configuration Release \
+                     -configuration Debug \
                      -sdk iphonesimulator \
+                     -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' \
                      -derivedDataPath ios/build \
                      CODE_SIGN_IDENTITY="" \
                      CODE_SIGNING_REQUIRED=NO \
-                     CODE_SIGNING_ALLOWED=NO
-        # Note: To build a signed .ipa for real devices, you would need to 
-        # configure certificates and provisioning profiles here.
+                     CODE_SIGNING_ALLOWED=NO \
+                     -quiet \
+                     | tee ios/xcodebuild.log
+
+      - name: Upload Build Log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-log
+          path: ios/xcodebuild.log
+          if-no-files-found: warn
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ios-build
-          path: ios/build/Build/Products/Release-iphonesimulator/*.app
+          name: ios-simulator-app
+          path: ios/build/Build/Products/Debug-iphonesimulator/StriverApp.app
+          if-no-files-found: error
+
+      # Optional: Build for real devices (requires certificates)
+      # - name: Build for Device (Release)
+      #   if: ${{ secrets.IOS_CERTIFICATE_BASE64 != '' }}
+      #   run: |
+      #     # Setup certificates and provisioning profiles
+      #     # Build signed IPA
+      #     xcodebuild -workspace ios/StriverApp.xcworkspace \
+      #                -scheme StriverApp \
+      #                -configuration Release \
+      #                -sdk iphoneos \
+      #                -archivePath ios/build/StriverApp.xcarchive \
+      #                archive
+      #     xcodebuild -exportArchive \
+      #                -archivePath ios/build/StriverApp.xcarchive \
+      #                -exportPath ios/build \
+      #                -exportOptionsPlist ios/ExportOptions.plist
