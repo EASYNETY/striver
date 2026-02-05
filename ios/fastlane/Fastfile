@@ -18,6 +18,31 @@ platform :ios do
     )
   end
 
+  desc "Build for App Store and Upload to TestFlight"
+  lane :deploy do
+    setup_ci
+
+    # 1. Sync Certificates (Requires Match or Manual Setup)
+    # match(type: "appstore", readonly: true) 
+
+    # 2. Build IPA
+    gym(
+      scheme: "StriverApp",
+      workspace: "StriverApp.xcworkspace",
+      configuration: "Release",
+      export_method: "app-store",
+      output_directory: "build",
+      output_name: "StriverApp.ipa",
+      clean: true,
+      xcargs: "-allowProvisioningUpdates CLANG_WARN_DOCUMENTATION_COMMENTS=NO"
+    )
+
+    # 3. Upload to TestFlight
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true
+    )
+  end
+
   desc "Build the iOS app for simulator (Testing only)"
   lane :build_sim do
     gym(
