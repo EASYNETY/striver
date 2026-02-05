@@ -49,19 +49,25 @@ export const ondatoService = {
   async createSession(params: CreateSessionParams): Promise<CreateSessionResult> {
     try {
       console.log('[OndatoService] Creating session:', params.externalReferenceId);
+      console.log('[OndatoService] Worker URL:', CLOUDFLARE_WORKER_URL);
+      
+      const requestBody = {
+        externalReferenceId: params.externalReferenceId,
+        language: params.language || 'en',
+      };
+      console.log('[OndatoService] Request body:', JSON.stringify(requestBody));
       
       const response = await fetch(`${CLOUDFLARE_WORKER_URL}/create-session`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          externalReferenceId: params.externalReferenceId,
-          language: params.language || 'en',
-        }),
+        body: JSON.stringify(requestBody),
       });
 
+      console.log('[OndatoService] Response status:', response.status);
       const data = await response.json();
+      console.log('[OndatoService] Response data:', JSON.stringify(data));
 
       if (!response.ok || !data.success) {
         console.error('[OndatoService] Create session failed:', data);
@@ -81,6 +87,11 @@ export const ondatoService = {
 
     } catch (error: any) {
       console.error('[OndatoService] Create session error:', error);
+      console.error('[OndatoService] Error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+      });
       return {
         success: false,
         error: error.message || 'Network error creating session',

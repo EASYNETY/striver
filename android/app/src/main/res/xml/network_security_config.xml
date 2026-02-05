@@ -1,17 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <!-- Allow all HTTPS connections -->
+    <!-- Allow all HTTPS connections with system certificates -->
     <base-config cleartextTrafficPermitted="false">
         <trust-anchors>
             <certificates src="system" />
+            <certificates src="user" />
         </trust-anchors>
     </base-config>
     
-    <!-- Allow connections to Cloudflare Workers -->
+    <!-- Explicitly allow HTTPS connections to required domains -->
     <domain-config cleartextTrafficPermitted="false">
         <domain includeSubdomains="true">striverapp.workers.dev</domain>
+        <domain includeSubdomains="true">workers.dev</domain>
         <domain includeSubdomains="true">ondato.com</domain>
         <domain includeSubdomains="true">idvapi.ondato.com</domain>
         <domain includeSubdomains="true">id.ondato.com</domain>
+        <domain includeSubdomains="true">cloudflare.com</domain>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </domain-config>
+    
+    <!-- Allow localhost for Metro bundler (development only) -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">10.0.2.2</domain>
+        <domain includeSubdomains="true">10.0.3.2</domain>
     </domain-config>
 </network-security-config>
