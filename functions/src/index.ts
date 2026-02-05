@@ -13,10 +13,21 @@ const getDb = () => db;
 
 setGlobalOptions({ region: 'us-central1' });
 
-import { handleOndatoVerification, syncOndatoStatus } from './ondato';
+import { handleOndatoVerification as handleOndatoVerificationInternal, syncOndatoStatus as syncOndatoStatusInternal } from './ondato';
 
 // Ondato Webhook
 export { ondatoWebhook } from './ondato-webhook';
+
+// Export Ondato functions as callable
+export const handleOndatoVerification = onCall({ cors: true }, async (request) => {
+    console.log(`[handleOndatoVerification] Auth Present: ${!!request.auth}, UID: ${request.auth?.uid || 'NONE'}`);
+    return await handleOndatoVerificationInternal(request.auth, request.data, getDb());
+});
+
+export const syncOndatoStatus = onCall({ cors: true }, async (request) => {
+    console.log(`[syncOndatoStatus] Auth Present: ${!!request.auth}, UID: ${request.auth?.uid || 'NONE'}`);
+    return await syncOndatoStatusInternal(request.auth, request.data, getDb());
+});
 
 /**
  * USER & AUTH FUNCTIONS
@@ -78,7 +89,7 @@ export const verifyOTP = onCall(async (request: any) => {
 export const verifyAge = onCall({ cors: true }, async (request) => {
     const { method } = request.data;
     if (method === 'ondato') {
-        return await handleOndatoVerification(request.auth, request.data, getDb());
+        return await handleOndatoVerificationInternal(request.auth, request.data, getDb());
     }
     throw new HttpsError('invalid-argument', `Unsupported verification method: ${method}`);
 });
@@ -88,7 +99,7 @@ export const startOndatoVerification = onCall({ cors: true }, async (request) =>
     if (!request.auth) {
         console.warn('[startOndatoVerification] Missing auth context. Check if client is using regional functions correctly.');
     }
-    return await handleOndatoVerification(request.auth, request.data, getDb());
+    return await handleOndatoVerificationInternal(request.auth, request.data, getDb());
 });
 
 export const checkVerificationStatus = onCall({ cors: true }, async (request) => {
@@ -122,7 +133,7 @@ export const checkVerificationStatus = onCall({ cors: true }, async (request) =>
 
         if (attempt.status === 'pending') {
             try {
-                const synced = await syncOndatoStatus(effectiveAuth, request.data, db);
+                const synced = await syncOndatoStatusInternal(effectiveAuth, request.data, db);
                 return {
                     status: synced.status,
                     sessionId: attempt.sessionId || attempt.externalReferenceId,

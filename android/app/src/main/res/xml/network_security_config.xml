@@ -10,6 +10,7 @@
     
     <!-- Explicitly allow HTTPS connections to required domains -->
     <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">ondato-proxy.striverapp.workers.dev</domain>
         <domain includeSubdomains="true">striverapp.workers.dev</domain>
         <domain includeSubdomains="true">workers.dev</domain>
         <domain includeSubdomains="true">ondato.com</domain>
@@ -22,10 +23,11 @@
         </trust-anchors>
     </domain-config>
     
-    <!-- Allow localhost for Metro bundler (development only) -->
+    <!-- Allow localhost and emulator for development -->
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="true">localhost</domain>
         <domain includeSubdomains="true">10.0.2.2</domain>
         <domain includeSubdomains="true">10.0.3.2</domain>
+        <domain includeSubdomains="true">192.168.1.1</domain>
     </domain-config>
 </network-security-config>

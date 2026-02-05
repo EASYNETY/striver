@@ -5,12 +5,13 @@
  * This eliminates Firebase authentication issues by bypassing Firebase Functions.
  */
 
-// Cloudflare Worker URL - deployed successfully!
+// Cloudflare Worker URL
 const CLOUDFLARE_WORKER_URL = 'https://ondato-proxy.striverapp.workers.dev';
 
 export interface CreateSessionParams {
   externalReferenceId: string;
   language?: string;
+  dateOfBirth?: string;
 }
 
 export interface CreateSessionResult {
@@ -22,7 +23,7 @@ export interface CreateSessionResult {
 }
 
 export interface CheckStatusParams {
-  identificationId: string;
+  sessionId: string;
 }
 
 export interface CheckStatusResult {
@@ -48,18 +49,29 @@ export const ondatoService = {
    */
   async createSession(params: CreateSessionParams): Promise<CreateSessionResult> {
     try {
-      console.log('[OndatoService] Creating session:', params.externalReferenceId);
+      console.log('[OndatoService] Starting session creation for:', params.externalReferenceId);
       console.log('[OndatoService] Worker URL:', CLOUDFLARE_WORKER_URL);
-      
+
+      // First, try a simple connectivity test to see if we can even reach the worker
+      try {
+        const healthCheck = await fetch(`${CLOUDFLARE_WORKER_URL}/health`, { method: 'GET' });
+        console.log('[OndatoService] Pre-flight health check status:', healthCheck.status);
+      } catch (healthError: any) {
+        console.warn('[OndatoService] Pre-flight health check failed:', healthError.message);
+        // We continue anyway, but this is a strong hint of network issues
+      }
+
       const requestBody = {
         externalReferenceId: params.externalReferenceId,
         language: params.language || 'en',
       };
-      console.log('[OndatoService] Request body:', JSON.stringify(requestBody));
-      
+
+      console.log('[OndatoService] Sending POST request...');
+
       const response = await fetch(`${CLOUDFLARE_WORKER_URL}/create-session`, {
         method: 'POST',
         headers: {
+          'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(requestBody),
@@ -67,7 +79,7 @@ export const ondatoService = {
 
       console.log('[OndatoService] Response status:', response.status);
       const data = await response.json();
-      console.log('[OndatoService] Response data:', JSON.stringify(data));
+      console.log('[OndatoService] Response data success:', !!data.success);
 
       if (!response.ok || !data.success) {
         console.error('[OndatoService] Create session failed:', data);
@@ -86,15 +98,21 @@ export const ondatoService = {
       };
 
     } catch (error: any) {
-      console.error('[OndatoService] Create session error:', error);
-      console.error('[OndatoService] Error details:', {
-        name: error.name,
+      console.error('[OndatoService] NETWORK ERROR:', error.name, '-', error.message);
+
+      // Diagnostic info
+      const diagnosticInfo = {
         message: error.message,
-        stack: error.stack,
-      });
+        name: error.name,
+        stack: error.stack?.substring(0, 200),
+        url: `${CLOUDFLARE_WORKER_URL}/create-session`,
+      };
+
+      console.error('[OndatoService] Diagnostic details:', JSON.stringify(diagnosticInfo));
+
       return {
         success: false,
-        error: error.message || 'Network error creating session',
+        error: `Network error: ${error.message || 'Check your internet connection'}`,
       };
     }
   },
@@ -107,9 +125,10 @@ export const ondatoService = {
    */
   async checkStatus(params: CheckStatusParams): Promise<CheckStatusResult> {
     try {
-      console.log('[OndatoService] Checking status:', params.identificationId);
-      
-      const response = await fetch(`${CLOUDFLARE_WORKER_URL}/check-status/${params.identificationId}`, {
+      console.log('[OndatoService] Checking status via Worker:', params.sessionId);
+
+      // Note: params.sessionId here maps to identificationId for the worker
+      const response = await fetch(`${CLOUDFLARE_WORKER_URL}/check-status/${params.sessionId}`, {
         method: 'GET',
       });
 
@@ -124,19 +143,20 @@ export const ondatoService = {
       }
 
       console.log('[OndatoService] Status retrieved:', data.status);
+
       return {
         success: true,
         status: data.status,
         ondatoStatus: data.ondatoStatus,
-        verificationData: data.verificationData,
-        rejectionReasons: data.rejectionReasons,
+        verificationData: data.verificationData || {},
+        rejectionReasons: data.rejectionReasons || [],
       };
 
     } catch (error: any) {
-      console.error('[OndatoService] Check status error:', error);
+      console.error('[OndatoService] Check status error:', error.message);
       return {
         success: false,
-        error: error.message || 'Network error checking status',
+        error: error.message || 'Failed to check status',
       };
     }
   },
@@ -150,12 +170,12 @@ export const ondatoService = {
     try {
       const response = await fetch(`${CLOUDFLARE_WORKER_URL}/health`);
       const data = await response.json();
-      
+
       if (response.ok && data.status === 'ok') {
         console.log('[OndatoService] Health check passed');
         return { ok: true, message: data.message };
       }
-      
+
       return { ok: false, message: 'Worker not responding correctly' };
     } catch (error: any) {
       console.error('[OndatoService] Health check failed:', error);

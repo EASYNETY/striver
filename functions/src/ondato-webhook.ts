@@ -4,11 +4,12 @@ const ONDATO_USERNAME = process.env.ONDATO_USERNAME;
 const ONDATO_PASSWORD = process.env.ONDATO_PASSWORD;
 
 // Log for debugging (remove in production)
-console.log('Webhook credentials loaded:', {
-    hasUsername: !!ONDATO_USERNAME,
-    hasPassword: !!ONDATO_PASSWORD,
-    username: ONDATO_USERNAME ? ONDATO_USERNAME.substring(0, 3) + '***' : 'MISSING'
-});
+// Commented out to avoid deployment timeouts
+// console.log('Webhook credentials loaded:', {
+//     hasUsername: !!ONDATO_USERNAME,
+//     hasPassword: !!ONDATO_PASSWORD,
+//     username: ONDATO_USERNAME ? ONDATO_USERNAME.substring(0, 3) + '***' : 'MISSING'
+// });
 
 const getDb = () => {
     const admin = require('firebase-admin');
@@ -49,7 +50,7 @@ export const ondatoWebhook = onRequest({ cors: true }, async (req, res) => {
             res.status(401).json({ error: 'Unauthorized - No auth header' });
             return;
         }
-        
+
         if (!verifyBasicAuth(authHeader)) {
             console.error('Basic auth verification failed');
             res.status(401).json({ error: 'Unauthorized - Invalid credentials' });
@@ -162,7 +163,7 @@ function verifyBasicAuth(authHeader: string): boolean {
             console.error('No base64 credentials in auth header');
             return false;
         }
-        
+
         const credentials = Buffer.from(base64Credentials, 'base64').toString('utf-8');
         const [username, password] = credentials.split(':');
 

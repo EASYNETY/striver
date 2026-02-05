@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Ima
 import { COLORS, SPACING } from '../../constants/theme';
 import { ShieldCheck, Users, Clock, Moon, Lock, ChevronRight, Bell, Video, UserPlus, Settings } from 'lucide-react-native';
 import userService, { ChildProfile } from '../../api/userService';
-import { firebaseAuth } from '../../api/firebase';
+import { firebaseAuth, db } from '../../api/firebase';
 import { useNavigation } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
@@ -14,6 +14,10 @@ const ParentDashboardScreen = () => {
     const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
     const [loading, setLoading] = useState(true);
 
+    // Verification Status State
+    const [verificationStatus, setVerificationStatus] = useState<string>('idle');
+    const [verificationLoading, setVerificationLoading] = useState(true);
+
     // Toggles state
     const [screenTimeEnabled, setScreenTimeEnabled] = useState(true);
     const [bedtimeModeEnabled, setBedtimeModeEnabled] = useState(true);
@@ -22,6 +26,15 @@ const ParentDashboardScreen = () => {
     useEffect(() => {
         const currentUser = firebaseAuth.currentUser;
         if (!currentUser) return;
+
+        // Listener for parent profile (verification status)
+        const unsubscribeProfile = db.collection('users').doc(currentUser.uid).onSnapshot(doc => {
+            if (doc.exists) {
+                const data = doc.data();
+                setVerificationStatus(data?.ageVerificationStatus || 'idle');
+            }
+            setVerificationLoading(false);
+        });
 
         // Listener for children
         const unsubscribeChildren = userService.getChildrenListener(currentUser.uid, (childData: ChildProfile[]) => {
@@ -35,6 +48,7 @@ const ParentDashboardScreen = () => {
         });
 
         return () => {
+            unsubscribeProfile();
             unsubscribeChildren();
             unsubscribeApprovals();
         };
@@ -55,6 +69,48 @@ const ParentDashboardScreen = () => {
         if (currentUser) {
             await userService.switchActiveProfile(currentUser.uid, childId);
         }
+    };
+
+    const renderVerificationStatus = () => {
+        if (verificationLoading) return null;
+
+        if (verificationStatus === 'verified') {
+            return (
+                <View style={styles.verificationBanner}>
+                    <ShieldCheck color={COLORS.primary} size={20} />
+                    <Text style={styles.verificationText}>Verified Parent Account</Text>
+                </View>
+            );
+        } else if (verificationStatus === 'pending') {
+            return (
+                <View style={[styles.verificationBanner, { backgroundColor: 'rgba(255, 179, 71, 0.1)', borderColor: 'rgba(255, 179, 71, 0.3)' }]}>
+                    <Clock color="#FFB347" size={20} />
+                    <Text style={[styles.verificationText, { color: '#FFB347' }]}>Verification Pending</Text>
+                </View>
+            );
+        } else if (verificationStatus === 'failed' || verificationStatus === 'rejected') {
+            return (
+                <TouchableOpacity
+                    style={[styles.verificationBanner, { backgroundColor: 'rgba(255, 59, 48, 0.1)', borderColor: 'rgba(255, 59, 48, 0.3)' }]}
+                    onPress={() => navigation.navigate('OndatoVerification')}
+                >
+                    <Users color="#FF3B30" size={20} />
+                    <Text style={[styles.verificationText, { color: '#FF3B30' }]}>Verification Failed - Tap to Retry</Text>
+                </TouchableOpacity>
+            );
+        }
+
+        // Default / Idle
+        return (
+            <TouchableOpacity
+                style={[styles.verificationBanner, { backgroundColor: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.1)' }]}
+                onPress={() => navigation.navigate('OndatoVerification')}
+            >
+                <ShieldCheck color={COLORS.textSecondary} size={20} />
+                <Text style={[styles.verificationText, { color: COLORS.textSecondary }]}>Verify Identity to Unlock All Features</Text>
+                <ChevronRight color={COLORS.textSecondary} size={16} />
+            </TouchableOpacity>
+        );
     };
 
     const ControlCard = ({ icon: Icon, title, value, onToggle }: any) => (
@@ -95,6 +151,9 @@ const ParentDashboardScreen = () => {
                         </TouchableOpacity>
                     </View>
                 </View>
+
+                {/* Verification Status Banner */}
+                {renderVerificationStatus()}
 
                 {/* Profile Switcher */}
                 <Text style={styles.sectionTitle}>Switch to Child View</Text>
@@ -241,6 +300,24 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.primary,
         borderWidth: 2,
         borderColor: COLORS.surface,
+    },
+    verificationBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(143, 251, 185, 0.1)',
+        marginHorizontal: SPACING.lg,
+        padding: SPACING.md,
+        borderRadius: 16,
+        marginBottom: SPACING.md,
+        borderWidth: 1,
+        borderColor: 'rgba(143, 251, 185, 0.2)',
+    },
+    verificationText: {
+        flex: 1,
+        color: COLORS.primary,
+        fontWeight: '600',
+        fontSize: 14,
+        marginLeft: 8,
     },
     sectionTitle: {
         fontSize: 18,

@@ -82,7 +82,7 @@ const OndatoVerification: React.FC<OndatoVerificationProps> = ({ navigation, rou
 
     // Listen for User Profile changes ONLY if verification is in progress
     let userUnsubscribe: (() => void) | undefined;
-    
+
     if (verificationInProgress.current && sessionId) {
       userUnsubscribe = db.collection('users').doc(uid).onSnapshot((snapshot) => {
         if (snapshot.exists) {
@@ -135,7 +135,7 @@ const OndatoVerification: React.FC<OndatoVerificationProps> = ({ navigation, rou
       }
     } catch (error: any) {
       console.error('[OndatoVerification] Error checking status:', error);
-      
+
       // Fallback: check user profile directly
       const userDoc = await db.collection('users').doc(uid).get();
       if (userDoc.exists && userDoc.data()?.ageVerificationStatus === 'verified') {
@@ -223,7 +223,7 @@ const OndatoVerification: React.FC<OndatoVerificationProps> = ({ navigation, rou
         if (snapshot.exists) {
           const userData = snapshot.data();
           const verificationStatus = userData?.ageVerificationStatus;
-          
+
           if (verificationStatus === 'verified') {
             handleVerificationSuccess();
           } else if (verificationStatus === 'rejected') {
@@ -310,25 +310,64 @@ const OndatoVerification: React.FC<OndatoVerificationProps> = ({ navigation, rou
           <WebView
             source={{ uri: verificationUrl }}
             style={styles.webview}
+            // Camera & Hardware Props
+            allowsInlineMediaPlayback={true}
+            mediaPlaybackRequiresUserAction={false}
+            javaScriptEnabled={true}
+            domStorageEnabled={true}
+            startInLoadingState={true}
+            originWhitelist={['*']}
+            // Permissions
+            androidLayerType="hardware"
+            mixedContentMode="always"
+
             onLoadStart={() => console.log('[WebView] Loading started')}
             onLoadEnd={() => console.log('[WebView] Loading ended')}
             onError={(syntheticEvent) => {
               const { nativeEvent } = syntheticEvent;
               console.error('[WebView] Error:', nativeEvent);
-              handleVerificationFailure();
+              // Don't fail immediately on minor errors
+              if (nativeEvent.description?.includes('net::ERR_UNKNOWN_URL_SCHEME') || nativeEvent.description?.includes('striver://')) {
+                // Ignore redirect loop errors if they are just deep links
+                return;
+              }
             }}
             onNavigationStateChange={(navState) => {
               console.log('[WebView] Navigation:', navState.url);
-              // Check for success/failure URLs
-              if (navState.url.includes('verification-success') || navState.url.includes('success')) {
+
+              // Handle custom schemes (ondato success/fail urls)
+              if (navState.url.startsWith('striver://')) {
+                // It's a deep link, we should handle it and stop loading
+                if (navState.url.includes('verification-success')) {
+                  handleVerificationSuccess();
+                } else if (navState.url.includes('verification-failed')) {
+                  handleVerificationFailure();
+                }
+                return;
+              }
+
+              // Check for success/failure URLs (standard HTTP redirects if deep link fails)
+              // IMPORTANT: Must ensure we don't match the query param in the initial URL
+
+              if ((navState.url.includes('verification-success') && !navState.url.includes('successUrl='))) {
                 handleVerificationSuccess();
-              } else if (navState.url.includes('verification-failed') || navState.url.includes('failed')) {
+              } else if ((navState.url.includes('verification-failed') && !navState.url.includes('failureUrl='))) {
                 handleVerificationFailure();
               }
             }}
-            javaScriptEnabled={true}
-            domStorageEnabled={true}
-            startInLoadingState={true}
+            onShouldStartLoadWithRequest={(request) => {
+              // Intercept striver:// links
+              if (request.url.startsWith('striver://')) {
+                console.log('[WebView] Intercepted Deep Link:', request.url);
+                if (request.url.includes('verification-success')) {
+                  handleVerificationSuccess();
+                } else if (request.url.includes('verification-failed')) {
+                  handleVerificationFailure();
+                }
+                return false; // STOP loading (handled internally)
+              }
+              return true; // Continue loading other URLs
+            }}
             renderLoading={() => (
               <View style={styles.webviewLoading}>
                 <ActivityIndicator size="large" color={COLORS.primary} />

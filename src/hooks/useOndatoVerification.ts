@@ -29,7 +29,7 @@ export const useOndatoVerification = () => {
     status: 'idle',
   });
   const [error, setError] = useState<string | null>(null);
-  
+
   // Polling state
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const currentSessionRef = useRef<{ sessionId: string; identificationId: string } | null>(null);
@@ -38,7 +38,7 @@ export const useOndatoVerification = () => {
   useEffect(() => {
     if (verificationStatus.status === 'pending' && currentSessionRef.current) {
       console.log('[useOndatoVerification] Starting auto-polling...');
-      
+
       // Clear any existing interval
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
@@ -91,10 +91,11 @@ export const useOndatoVerification = () => {
 
       console.log('[useOndatoVerification] Creating session:', sessionId);
 
-      // Call Ondato service via Cloudflare Worker
+      // Call Ondato service via Firebase Functions
       const result = await ondatoService.createSession({
         externalReferenceId: sessionId,
         language: 'en',
+        dateOfBirth: config.dateOfBirth,
       });
 
       if (!result.success || !result.identificationId) {
@@ -129,8 +130,8 @@ export const useOndatoVerification = () => {
 
       // Store current session for polling
       currentSessionRef.current = {
-        sessionId: result.sessionId,
-        identificationId: result.identificationId,
+        sessionId: result.sessionId || sessionId,
+        identificationId: result.identificationId || sessionId,
       };
 
       setVerificationStatus({
@@ -163,8 +164,8 @@ export const useOndatoVerification = () => {
     try {
       console.log('[useOndatoVerification] Checking status:', identificationId);
 
-      // Call Ondato service via Cloudflare Worker
-      const result = await ondatoService.checkStatus({ identificationId });
+      // Call Ondato service via Firebase Functions
+      const result = await ondatoService.checkStatus({ sessionId: identificationId });
 
       if (!result.success) {
         console.error('[useOndatoVerification] Status check failed:', result.error);
@@ -269,7 +270,7 @@ export const useOndatoVerification = () => {
       pollingIntervalRef.current = null;
     }
     currentSessionRef.current = null;
-    
+
     setVerificationStatus({ status: 'idle' });
     setError(null);
     setLoading(false);
