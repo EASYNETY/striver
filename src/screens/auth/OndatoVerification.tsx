@@ -35,13 +35,14 @@ const OndatoVerification: React.FC<OndatoVerificationProps> = ({ navigation, rou
   const uid = routeUid || firebaseAuth.currentUser?.uid;
 
   const [loading, setLoading] = useState(false);
-  const [verificationStatus, setVerificationStatus] = useState<'idle' | 'pending' | 'success' | 'failed' | 'timeout' | 'webview_active'>('idle');
+  const [verificationStatus, setVerificationStatus] = useState<'idle' | 'pending' | 'success' | 'failed' | 'timeout' | 'webview_active' | 'already_verified'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [identificationId, setIdentificationId] = useState<string | null>(null);
   const [verificationUrl, setVerificationUrl] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [useWebView, setUseWebView] = useState(true); // Toggle for WebView vs external browser
+  const [checkingExistingStatus, setCheckingExistingStatus] = useState(true);
 
   const appState = useRef(AppState.currentState);
   const verificationInProgress = useRef(false);
@@ -50,6 +51,28 @@ const OndatoVerification: React.FC<OndatoVerificationProps> = ({ navigation, rou
   // Use the hook
   const { startVerification: startVerificationHook, checkStatus: checkStatusHook } = useOndatoVerification();
 
+  // Check if user is already verified on mount
+  useEffect(() => {
+    const checkExistingVerification = async () => {
+      try {
+        const userDoc = await db.collection('users').doc(uid).get();
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          if (userData?.ageVerificationStatus === 'verified') {
+            console.log('[OndatoVerification] User already verified, showing status');
+            setVerificationStatus('already_verified');
+          }
+        }
+      } catch (error) {
+        console.error('[OndatoVerification] Error checking existing verification:', error);
+      } finally {
+        setCheckingExistingStatus(false);
+      }
+    };
+
+    checkExistingVerification();
+  }, [uid]);
+
   useEffect(() => {
     // Listen for deep links
     const subscription = Linking.addEventListener('url', handleDeepLink);
@@ -57,24 +80,30 @@ const OndatoVerification: React.FC<OndatoVerificationProps> = ({ navigation, rou
     // Listen for app state changes
     const appStateSubscription = AppState.addEventListener('change', handleAppStateChange);
 
-    // Listen for User Profile changes
-    const userUnsubscribe = db.collection('users').doc(uid).onSnapshot((snapshot) => {
-      if (snapshot.exists) {
-        const userData = snapshot.data();
-        if (userData?.ageVerificationStatus === 'verified') {
-          console.log('User verified via profile sync!');
-          handleVerificationSuccess();
+    // Listen for User Profile changes ONLY if verification is in progress
+    let userUnsubscribe: (() => void) | undefined;
+    
+    if (verificationInProgress.current && sessionId) {
+      userUnsubscribe = db.collection('users').doc(uid).onSnapshot((snapshot) => {
+        if (snapshot.exists) {
+          const userData = snapshot.data();
+          if (userData?.ageVerificationStatus === 'verified') {
+            console.log('User verified via profile sync!');
+            handleVerificationSuccess();
+          }
         }
-      }
-    });
+      });
+    }
 
     return () => {
       subscription.remove();
       appStateSubscription.remove();
-      userUnsubscribe();
+      if (userUnsubscribe) {
+        userUnsubscribe();
+      }
       stopListener();
     };
-  }, [sessionId, uid]);
+  }, [sessionId, uid, verificationInProgress.current]);
 
   const handleAppStateChange = (nextAppState: AppStateStatus) => {
     if (
@@ -312,6 +341,31 @@ const OndatoVerification: React.FC<OndatoVerificationProps> = ({ navigation, rou
     }
 
     switch (verificationStatus) {
+      case 'already_verified':
+        return (
+          <View style={styles.statusContainer}>
+            <View style={styles.successIconBox}>
+              <CheckCircle2 color={COLORS.primary} size={64} />
+            </View>
+            <Text style={styles.statusTitle}>Already Verified!</Text>
+            <Text style={styles.statusDesc}>
+              Your identity has already been verified. You can proceed to the next step.
+            </Text>
+            <TouchableOpacity
+              style={styles.retryBtn}
+              onPress={() => navigation.navigate('InterestsSelection', { uid })}
+            >
+              <Text style={styles.retryBtnText}>Continue</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.manualCheckBtn}
+              onPress={() => setVerificationStatus('idle')}
+            >
+              <Text style={styles.manualCheckBtnText}>Verify Again</Text>
+            </TouchableOpacity>
+          </View>
+        );
+
       case 'success':
         return (
           <View style={styles.statusContainer}>
@@ -388,6 +442,16 @@ const OndatoVerification: React.FC<OndatoVerificationProps> = ({ navigation, rou
         );
 
       default:
+        // Show loading while checking existing verification status
+        if (checkingExistingStatus) {
+          return (
+            <View style={styles.statusContainer}>
+              <ActivityIndicator size="large" color={COLORS.primary} />
+              <Text style={styles.statusTitle}>Checking Status...</Text>
+            </View>
+          );
+        }
+
         return (
           <View style={styles.content}>
             <View style={styles.iconContainer}>

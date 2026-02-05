@@ -96,11 +96,19 @@ jobs:
           path: ios/xcodebuild.log
           if-no-files-found: warn
 
+      - name: List built products (Debug)
+        if: always()
+        run: |
+          echo "Listing contents of ios/build/Build/Products/Debug-iphonesimulator:"
+          ls -R ios/build/Build/Products/Debug-iphonesimulator || echo "Directory not found"
+          echo "Search for .app files:"
+          find ios/build -name "*.app"
+
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ios-simulator-app
-          path: ios/build/Build/Products/Debug-iphonesimulator/StriverApp.app
+          path: ios/build/Build/Products/Debug-iphonesimulator/*.app
           if-no-files-found: error
 
       # Optional: Build for real devices (requires certificates)

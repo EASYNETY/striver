@@ -11,6 +11,8 @@ jobs:
   build:
     name: Build Android APK
     runs-on: ubuntu-latest
+    env:
+      ANDROID_UPLOAD_KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -53,7 +55,7 @@ jobs:
           ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Build Release APK (if secrets available)
-        if: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 != '' }}
+        if: env.ANDROID_UPLOAD_KEYSTORE_BASE64 != ''
         run: |
           cd android
           # Create the keystore file from base64 secret
@@ -64,6 +66,12 @@ jobs:
             -PMYAPP_UPLOAD_KEY_ALIAS=${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }} \
             -PMYAPP_UPLOAD_KEY_PASSWORD=${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
 
+      - name: List built APKs
+        if: always()
+        run: |
+          echo "Listing all APKs found in android/app/build/outputs:"
+          find android/app/build/outputs -name "*.apk"
+
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
@@ -72,7 +80,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload Release APK
-        if: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 != '' }}
+        if: env.ANDROID_UPLOAD_KEYSTORE_BASE64 != ''
         uses: actions/upload-artifact@v4
         with:
           name: app-release
