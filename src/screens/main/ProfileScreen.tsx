@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Image, Dimensions, Share, Alert } from 'react-native';
-import { COLORS, SPACING } from '../../constants/theme';
+import { COLORS, SPACING, FONTS } from '../../constants/theme';
 import { Settings as SettingsIcon, Search, Share2, Edit3, Trophy, Grid, MessageSquare, ShieldCheck, LogOut, ChevronLeft, UserPlus, UserCheck, Star } from 'lucide-react-native';
 import { useIsFocused, useRoute } from '@react-navigation/native';
 import userService, { UserProfile } from '../../api/userService';
@@ -8,6 +8,7 @@ import postService, { Post } from '../../api/postService';
 import { firebaseAuth } from '../../api/firebase';
 import { shareContent } from '../../utils/deepLink';
 import { CAREER_TIERS, BADGE_TIERS } from '../../constants/rewards';
+import { DiagonalStreaksBackground } from '../../components/common/DiagonalStreaksBackground';
 
 const { width } = Dimensions.get('window');
 const GRID_SIZE = (width - 32 - 4) / 3;
@@ -206,6 +207,7 @@ const ProfileScreen = ({ navigation }: any) => {
 
     return (
         <SafeAreaView style={styles.container}>
+            <DiagonalStreaksBackground />
             <View style={styles.header}>
                 <View style={styles.headerLeft}>
                     {navigation.canGoBack() && (
@@ -374,12 +376,12 @@ const styles = StyleSheet.create({
     },
     tierName: {
         fontSize: 10,
-        fontWeight: '800',
+        fontFamily: FONTS.display.bold,
         color: COLORS.background,
     },
     username: {
         fontSize: 22,
-        fontWeight: '800',
+        fontFamily: FONTS.display.bold,
         color: COLORS.white,
         marginBottom: 4,
     },
@@ -389,6 +391,7 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginBottom: SPACING.md,
         paddingHorizontal: SPACING.xl,
+        fontFamily: FONTS.body.regular,
     },
     editBtn: {
         flexDirection: 'row',
@@ -402,7 +405,7 @@ const styles = StyleSheet.create({
     },
     editBtnText: {
         fontSize: 14,
-        fontWeight: '700',
+        fontFamily: FONTS.display.semiBold,
         color: COLORS.background,
     },
     statsRow: {
@@ -417,13 +420,14 @@ const styles = StyleSheet.create({
     },
     statValue: {
         fontSize: 18,
-        fontWeight: '800',
+        fontFamily: FONTS.display.bold,
         color: COLORS.white,
     },
     statLabel: {
         fontSize: 12,
         color: COLORS.textSecondary,
         marginTop: 2,
+        fontFamily: FONTS.body.regular,
     },
     tabsSection: {
         marginBottom: 2,
@@ -443,7 +447,7 @@ const styles = StyleSheet.create({
     },
     tabBtnText: {
         fontSize: 15,
-        fontWeight: '600',
+        fontFamily: FONTS.display.medium,
         color: COLORS.textSecondary,
     },
     tabBtnTextActive: {
@@ -475,7 +479,7 @@ const styles = StyleSheet.create({
     gridStats: {
         color: COLORS.white,
         fontSize: 10,
-        fontWeight: '700',
+        fontFamily: FONTS.body.bold,
     },
     emptyState: {
         width: '100%',
@@ -486,6 +490,7 @@ const styles = StyleSheet.create({
     emptyText: {
         color: COLORS.textSecondary,
         fontSize: 14,
+        fontFamily: FONTS.body.regular,
     },
     headerLeft: {
         flex: 1,

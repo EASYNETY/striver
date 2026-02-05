@@ -7,6 +7,7 @@ import userService from '../../api/userService';
 import { firebaseAuth } from '../../api/firebase';
 import { useIsFocused } from '@react-navigation/native';
 import { Coins, Lock, History, Star, Info, Crown, Loader } from 'lucide-react-native';
+import { DiagonalStreaksBackground } from '../../components/common/DiagonalStreaksBackground';
 
 interface RewardsScreenProps {
     user: any;
@@ -273,6 +274,7 @@ const RewardsScreen: React.FC<RewardsScreenProps> = ({ user: initialUser, naviga
     // --- Render Main ---
     return (
         <SafeAreaView style={styles.container}>
+            <DiagonalStreaksBackground />
             {renderHeader()}
             {renderProgressBar()}
 
@@ -347,78 +349,78 @@ const RewardsScreen: React.FC<RewardsScreenProps> = ({ user: initialUser, naviga
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: COLORS.background },
     header: { padding: SPACING.md, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    headerTitle: { fontSize: 28, fontWeight: '800', color: COLORS.white },
+    headerTitle: { fontSize: 28, fontFamily: FONTS.display.bold, color: COLORS.white },
     coinBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#333', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, marginTop: 8 },
-    coinText: { color: 'white', fontWeight: 'bold', marginLeft: 6, fontSize: 16 },
+    coinText: { color: 'white', fontFamily: FONTS.display.bold, marginLeft: 6, fontSize: 16 },
     tierBadge: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 8 },
-    tierText: { fontWeight: '800', fontSize: 12, textTransform: 'uppercase' },
+    tierText: { fontFamily: FONTS.display.bold, fontSize: 12, textTransform: 'uppercase' },
 
     progressContainer: { paddingHorizontal: SPACING.md, marginBottom: SPACING.lg },
     progressLabels: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-    progressText: { color: COLORS.textSecondary, fontSize: 12 },
+    progressText: { color: COLORS.textSecondary, fontSize: 12, fontFamily: FONTS.body.regular },
     track: { height: 8, backgroundColor: '#333', borderRadius: 4, overflow: 'hidden' },
     bar: { height: '100%' },
-    motivationText: { color: COLORS.primary, fontSize: 12, marginTop: 6, textAlign: 'center', fontWeight: '600' },
+    motivationText: { color: COLORS.primary, fontSize: 12, marginTop: 6, textAlign: 'center', fontFamily: FONTS.body.semiBold },
 
     tabs: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#333' },
     tab: { flex: 1, paddingVertical: 14, alignItems: 'center' },
     activeTab: { borderBottomWidth: 2, borderBottomColor: COLORS.primary },
-    tabText: { color: COLORS.textSecondary, fontWeight: '600' },
+    tabText: { color: COLORS.textSecondary, fontFamily: FONTS.display.medium },
     activeTabText: { color: COLORS.white },
 
     scrollContent: { padding: SPACING.md },
-    sectionTitle: { fontSize: 18, fontWeight: 'bold', color: 'white', marginBottom: 16, marginTop: 10 },
+    sectionTitle: { fontSize: 18, fontFamily: FONTS.display.bold, color: 'white', marginBottom: 16, marginTop: 10 },
     taskCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: COLORS.surface, padding: 16, borderRadius: 16, marginBottom: 12, elevation: 4 },
     taskLeft: { flexDirection: 'row', alignItems: 'center', gap: 16, flex: 1, marginRight: 10 },
-    taskTitle: { color: 'white', fontWeight: '700', fontSize: 16 },
-    taskReward: { color: '#FFD700', fontSize: 13, fontWeight: 'bold', marginTop: 2 },
+    taskTitle: { color: 'white', fontFamily: FONTS.body.bold, fontSize: 16 },
+    taskReward: { color: '#FFD700', fontSize: 13, fontFamily: FONTS.body.bold, marginTop: 2 },
     taskProgressBox: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
     taskTrack: { flex: 1, height: 4, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 2, overflow: 'hidden' },
     taskBar: { height: '100%', backgroundColor: COLORS.primary },
-    taskProgressText: { color: COLORS.textSecondary, fontSize: 10, fontWeight: 'bold' },
+    taskProgressText: { color: COLORS.textSecondary, fontSize: 10, fontFamily: FONTS.body.bold },
     claimBtn: { backgroundColor: COLORS.primary, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, minWidth: 80, alignItems: 'center' },
     claimedBtn: { backgroundColor: '#333' },
-    claimText: { color: COLORS.background, fontWeight: 'bold', fontSize: 12 },
+    claimText: { color: COLORS.background, fontFamily: FONTS.display.semiBold, fontSize: 12 },
 
     challengeCard: { backgroundColor: '#2A1A40', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#C7A8FF' },
     challengeHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-    challengeTitle: { color: '#C7A8FF', fontSize: 18, fontWeight: '800' },
-    challengeDesc: { color: 'white', marginBottom: 16 },
+    challengeTitle: { color: '#C7A8FF', fontSize: 18, fontFamily: FONTS.display.bold },
+    challengeDesc: { color: 'white', marginBottom: 16, fontFamily: FONTS.body.regular },
     challengeReward: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    rewardText: { color: '#FFD700', fontWeight: 'bold', fontSize: 16 },
+    rewardText: { color: '#FFD700', fontFamily: FONTS.body.bold, fontSize: 16 },
     joinBtn: { backgroundColor: '#C7A8FF', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 },
-    joinText: { color: '#2A1A40', fontWeight: 'bold' },
+    joinText: { color: '#2A1A40', fontFamily: FONTS.display.semiBold },
 
-    sectionExplain: { color: COLORS.textSecondary, marginBottom: 20, textAlign: 'center' },
+    sectionExplain: { color: COLORS.textSecondary, marginBottom: 20, textAlign: 'center', fontFamily: FONTS.body.regular },
     tierRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
     activeTierRow: { backgroundColor: 'rgba(255,255,255,0.05)', marginHorizontal: -16, paddingHorizontal: 16 },
     tierInfo: { flexDirection: 'row', alignItems: 'center', gap: 12 },
     tierIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-    tierName: { color: 'white', fontSize: 16 },
-    tierThreshold: { color: COLORS.textSecondary, fontSize: 12 },
+    tierName: { color: 'white', fontSize: 16, fontFamily: FONTS.display.medium },
+    tierThreshold: { color: COLORS.textSecondary, fontSize: 12, fontFamily: FONTS.body.regular },
     benefitsList: { marginTop: 8, gap: 4 },
     benefitItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     benefitDot: { width: 4, height: 4, borderRadius: 2 },
-    benefitText: { color: 'rgba(255,255,255,0.6)', fontSize: 11 },
-    currentTag: { color: COLORS.primary, fontSize: 12, fontWeight: 'bold' },
-    unlockedTag: { color: COLORS.success, fontSize: 12 },
+    benefitText: { color: 'rgba(255,255,255,0.6)', fontSize: 11, fontFamily: FONTS.body.regular },
+    currentTag: { color: COLORS.primary, fontSize: 12, fontFamily: FONTS.body.bold },
+    unlockedTag: { color: COLORS.success, fontSize: 12, fontFamily: FONTS.body.regular },
 
     centerEmpty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-    emptyText: { color: 'white', fontSize: 20, fontWeight: 'bold' },
-    subEmpty: { color: COLORS.textSecondary, marginTop: 8 },
+    emptyText: { color: 'white', fontSize: 20, fontFamily: FONTS.display.bold },
+    subEmpty: { color: COLORS.textSecondary, marginTop: 8, fontFamily: FONTS.body.regular },
 
     modalContainer: { flex: 1, backgroundColor: COLORS.background },
     modalHeader: { padding: 16, flexDirection: 'row', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: '#333' },
-    modalTitle: { color: 'white', fontSize: 18, fontWeight: 'bold' },
-    closeText: { color: COLORS.primary, fontSize: 16 },
+    modalTitle: { color: 'white', fontSize: 18, fontFamily: FONTS.display.bold },
+    closeText: { color: COLORS.primary, fontSize: 16, fontFamily: FONTS.body.semiBold },
     historyRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
     historyLeft: { gap: 2 },
-    historyType: { color: COLORS.textSecondary, fontSize: 10, fontWeight: 'bold' },
-    historyAction: { color: 'white', fontSize: 14 },
-    historyDate: { color: 'rgba(255,255,255,0.4)', fontSize: 12 },
-    historyAmount: { fontWeight: 'bold', fontSize: 16 },
+    historyType: { color: COLORS.textSecondary, fontSize: 10, fontFamily: FONTS.body.bold },
+    historyAction: { color: 'white', fontSize: 14, fontFamily: FONTS.body.regular },
+    historyDate: { color: 'rgba(255,255,255,0.4)', fontSize: 12, fontFamily: FONTS.body.regular },
+    historyAmount: { fontFamily: FONTS.body.bold, fontSize: 16 },
     tierUpRow: { backgroundColor: 'rgba(255, 215, 0, 0.1)', borderColor: '#FFD700', borderWidth: 1, borderRadius: 8, paddingHorizontal: 12 },
-    tierUpText: { color: '#FFD700', fontWeight: 'bold' }
+    tierUpText: { color: '#FFD700', fontFamily: FONTS.body.bold }
 });
 
 export default RewardsScreen;

@@ -7,6 +7,7 @@ import authService from '../../api/authService';
 import { COLORS, SPACING } from '../../constants/theme';
 import { Mail, Lock, ChevronLeft, ArrowRight, Apple, Facebook, Phone } from 'lucide-react-native';
 import { logEvent, EVENTS } from '../../utils/analytics';
+import { DiagonalStreaksBackground } from '../../components/common/DiagonalStreaksBackground';
 
 // Custom Google Icon SVG since Lucide doesn't have it
 const GoogleIcon = ({ size = 24 }: { size?: number }) => (
@@ -17,8 +18,8 @@ const GoogleIcon = ({ size = 24 }: { size?: number }) => (
 
 const SignUpScreen = ({ navigation, route }: any) => {
     const insets = useSafeAreaInsets();
-    const { accountType = 'individual' } = route.params || {};
-    const [mode, setMode] = useState<'signup' | 'login'>('signup');
+    const { accountType = 'individual', mode: initialMode = 'signup' } = route.params || {};
+    const [mode, setMode] = useState<'signup' | 'login'>(initialMode);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -74,7 +75,7 @@ const SignUpScreen = ({ navigation, route }: any) => {
                 // Navigation will be handled by App.tsx listener
             }
         } catch (error: any) {
-            console.error(`${provider} Login Error:`, error);
+            console.error(`${provider} Login Error: `, error);
             if (error.code !== 'E_SIGN_IN_CANCELLED' && error.message !== 'User cancelled the login process') {
                 Alert.alert('Login Failed', error.message);
             }
@@ -85,6 +86,7 @@ const SignUpScreen = ({ navigation, route }: any) => {
 
     return (
         <SafeAreaView style={styles.container}>
+            <DiagonalStreaksBackground />
             <View style={[styles.header, { paddingTop: Platform.OS === 'android' ? insets.top + 10 : 10 }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
                     <ChevronLeft color={COLORS.white} size={28} />
@@ -167,6 +169,12 @@ const SignUpScreen = ({ navigation, route }: any) => {
                 </View>
 
                 <View style={styles.socialContainer}>
+                    <TouchableOpacity
+                        style={styles.socialBtn}
+                        onPress={() => navigation.navigate('PhoneAuth', { accountType, mode })}
+                    >
+                        <Phone color={COLORS.white} size={24} />
+                    </TouchableOpacity>
                     <TouchableOpacity style={styles.socialBtn} onPress={() => handleSocialLogin('google')}>
                         <GoogleIcon />
                     </TouchableOpacity>

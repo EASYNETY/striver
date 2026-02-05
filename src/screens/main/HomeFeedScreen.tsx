@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, StyleSheet, FlatList, Dimensions, StatusBar, Text, TouchableOpacity, Image, Share, RefreshControl, Modal, SafeAreaView, TextInput, Platform, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Video from 'react-native-video';
+import HLSVideoPlayer from '../../components/HLSVideoPlayer';
 import { COLORS, SPACING } from '../../constants/theme';
 import { Heart, MessageCircle, Share2, Search, Bell, Coins, ShieldCheck, X, UserPlus, UserCheck, Trophy, Camera, Home, ArrowRight, MessageSquare, Plus, Star } from 'lucide-react-native';
 import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -542,13 +542,10 @@ const MemoizedPostItem = React.memo(({ item, index, isFocused, visibleItemIndex,
                         <Text style={styles.rejectedDesc}>This content does not meet our community guidelines.</Text>
                     </View>
                 ) : (
-                    <Video
-                        source={{ uri: item.videoUrl }}
-                        style={StyleSheet.absoluteFill}
-                        resizeMode="cover"
-                        repeat
+                    <HLSVideoPlayer
+                        videoUrl={item.videoUrl}
+                        thumbnail={item.thumbnailUrl}
                         paused={isPaused}
-                        muted={false}
                         onProgress={(data) => {
                             if (data.playableDuration > 0) {
                                 setProgress((data.currentTime / data.playableDuration) * 100);

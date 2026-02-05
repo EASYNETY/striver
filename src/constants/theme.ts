@@ -40,9 +40,23 @@ export const SPACING = {
 };
 
 export const FONTS = {
-    bold: 'Outfit-Bold',
-    semiBold: 'Outfit-SemiBold',
-    medium: 'Outfit-Medium',
-    regular: 'Outfit-Regular',
-    light: 'Outfit-Light',
+    display: {
+        bold: 'Oswald-Bold',
+        semiBold: 'Oswald-SemiBold',
+        medium: 'Oswald-Medium',
+        regular: 'Oswald-Regular',
+    },
+    body: {
+        bold: 'NotoSans-Bold',
+        semiBold: 'NotoSans-SemiBold',
+        medium: 'NotoSans-Medium',
+        regular: 'NotoSans-Regular',
+        light: 'NotoSans-Light',
+    },
+    // Legacy support - will be removed
+    bold: 'Oswald-Bold',
+    semiBold: 'Oswald-SemiBold',
+    medium: 'Oswald-Medium',
+    regular: 'NotoSans-Regular',
+    light: 'NotoSans-Light',
 };

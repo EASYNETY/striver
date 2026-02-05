@@ -1,31 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, TextInput, ScrollView, Alert, Platform, PermissionsAndroid } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Video from 'react-native-video';
 import { COLORS, SPACING } from '../../constants/theme';
 import { ChevronLeft, Camera as CameraIcon, RefreshCw, Zap, Image as ImageIcon, PlayCircle } from 'lucide-react-native';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
-
-import postService from '../../api/postService';
-// ... rest of imports ...
-import { RewardService } from '../../api/rewardService';
+import { CameraPermissionModal } from '../../components/common/CameraPermissionModal';
 import userService from '../../api/userService';
-import backgroundUploadService from '../../services/backgroundUploadService';
+import { uploadVideoToCloudflare, UploadProgress } from '../../services/cloudflareVideoService';
 
 const UploadScreen = ({ navigation, route }: any) => {
     const insets = useSafeAreaInsets();
     const { squadId, responseTo } = route.params || {};
     const [title, setTitle] = useState(responseTo ? 'My Response' : '');
     const [tags, setTags] = useState('');
-    const [isRecording, setIsRecording] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
     const [videoUri, setVideoUri] = useState<string | null>(null);
     const [cameraType, setCameraType] = useState<'back' | 'front'>('back');
-
-    // Initialize background upload service
-    useEffect(() => {
-        backgroundUploadService.initialize();
-    }, []);
+    const [showPermissionModal, setShowPermissionModal] = useState(false);
 
     const requestCameraPermission = async () => {
         if (Platform.OS === 'android') {
@@ -63,9 +56,17 @@ const UploadScreen = ({ navigation, route }: any) => {
     };
 
     const recordVideo = async () => {
+        // Show custom permission modal first
+        setShowPermissionModal(true);
+    };
+
+    const handlePermissionAllow = async () => {
+        setShowPermissionModal(false);
+        
+        // Now request actual system permission
         const hasPermission = await requestCameraPermission();
         if (!hasPermission) {
-            Alert.alert("Permission Required", "Camera access is needed to record video.");
+            Alert.alert("Permission Denied", "Camera access is needed to record video. You can enable it in Settings.");
             return;
         }
 
@@ -92,6 +93,10 @@ const UploadScreen = ({ navigation, route }: any) => {
         }
     };
 
+    const handlePermissionDeny = () => {
+        setShowPermissionModal(false);
+    };
+
     const toggleCamera = () => {
         setCameraType(prev => prev === 'back' ? 'front' : 'back');
         Alert.alert("Camera Switched", `Now using ${cameraType === 'back' ? 'front' : 'back'} camera.`);
@@ -109,18 +114,26 @@ const UploadScreen = ({ navigation, route }: any) => {
         }
 
         setLoading(true);
+        setUploadProgress(0);
+        
         try {
-            console.log('[UploadScreen] Starting upload with videoUri:', videoUri);
+            console.log('[UploadScreen] Starting Cloudflare upload with videoUri:', videoUri);
 
-            await postService.createPost({
-                videoUri: videoUri,
-                caption: title,
-                hashtags: tags.split(',').map(tag => tag.trim()).filter(t => t.length > 0),
-                squadId: squadId
-            });
+            // Upload to Cloudflare with progress tracking
+            const postId = await uploadVideoToCloudflare(
+                videoUri,
+                {
+                    caption: title,
+                    hashtags: tags.split(',').map(tag => tag.trim()).filter(t => t.length > 0),
+                    challengeId: squadId
+                },
+                (progress: UploadProgress) => {
+                    setUploadProgress(progress.percentage);
+                    console.log(`[UploadScreen] Upload progress: ${progress.percentage}%`);
+                }
+            );
 
-            console.log('[UploadScreen] Post created successfully');
-
+            console.log('[UploadScreen] Video uploaded successfully, postId:', postId);
 
             const userData = await userService.getCurrentUserProfile();
             const isJunior = userData?.ageTier === 'junior_baller';
@@ -129,7 +142,7 @@ const UploadScreen = ({ navigation, route }: any) => {
                 isJunior ? "Review Required" : "Success",
                 isJunior
                     ? "Great video! It has been sent to your parent for approval before it goes live on the feed."
-                    : "Your video has been posted!",
+                    : "Your video has been posted and is being processed. It will appear in the feed shortly!",
                 [{ text: "Great!", onPress: () => navigation.navigate('HomeFeed') }]
             );
         } catch (error: any) {
@@ -145,6 +158,7 @@ const UploadScreen = ({ navigation, route }: any) => {
             );
         } finally {
             setLoading(false);
+            setUploadProgress(0);
         }
     };
 
@@ -203,7 +217,7 @@ const UploadScreen = ({ navigation, route }: any) => {
                         style={styles.recordOuter}
                         onPress={recordVideo}
                     >
-                        <View style={[styles.recordInner, isRecording && { borderRadius: 8, width: 30, height: 30 }]} />
+                        <View style={styles.recordInner} />
                     </TouchableOpacity>
 
                     <TouchableOpacity style={styles.effectsBtn} onPress={() => videoUri && Alert.alert("Preview", "Previewing video...")}>
@@ -225,7 +239,7 @@ const UploadScreen = ({ navigation, route }: any) => {
                             onChangeText={setTitle}
                         />
 
-                        <Text style={styles.label}>Tags (comma separated)</Text>
+                        <Text style={styles.label}>Tags</Text>
                         <TextInput
                             style={styles.input}
                             placeholder="#skill, #goal, #challenge"
@@ -239,11 +253,26 @@ const UploadScreen = ({ navigation, route }: any) => {
                             onPress={handlePost}
                             disabled={loading}
                         >
-                            <Text style={styles.postBtnText}>{loading ? 'Posting...' : 'Post to Striver'}</Text>
+                            <Text style={styles.postBtnText}>
+                                {loading ? `Uploading... ${uploadProgress}%` : 'Post to Striver'}
+                            </Text>
                         </TouchableOpacity>
+
+                        {loading && uploadProgress > 0 && (
+                            <View style={styles.progressBarContainer}>
+                                <View style={[styles.progressBar, { width: `${uploadProgress}%` }]} />
+                            </View>
+                        )}
                     </View>
                 </ScrollView>
             </View>
+
+            {/* Custom Permission Modal */}
+            <CameraPermissionModal
+                visible={showPermissionModal}
+                onAllow={handlePermissionAllow}
+                onDeny={handlePermissionDeny}
+            />
         </SafeAreaView >
     );
 };
@@ -382,6 +411,18 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: '700',
         color: COLORS.background,
+    },
+    progressBarContainer: {
+        height: 4,
+        backgroundColor: 'rgba(143, 251, 185, 0.2)',
+        borderRadius: 2,
+        overflow: 'hidden',
+        marginTop: 8,
+    },
+    progressBar: {
+        height: '100%',
+        backgroundColor: COLORS.primary,
+        borderRadius: 2,
     },
 });
 

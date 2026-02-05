@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { db } from '../../api/firebase';
 import { COLORS, SPACING } from '../../constants/theme';
 import { Lock, ChevronLeft, Eye, EyeOff, CheckCircle2 } from 'lucide-react-native';
+import { DiagonalStreaksBackground } from '../../components/common/DiagonalStreaksBackground';
 
 const ResetPasswordScreen = ({ navigation, route }: any) => {
     const insets = useSafeAreaInsets();
@@ -35,8 +36,8 @@ const ResetPasswordScreen = ({ navigation, route }: any) => {
 
             if (result.data.success) {
                 Alert.alert(
-                    'Success',
-                    'Your password has been reset successfully. You can now log in with your new password.',
+                    'All Set!',
+                    'Password updated! You\'re good to go - log in with your new password.',
                     [{ text: 'Log In', onPress: () => navigation.navigate('SignUp', { mode: 'login' }) }]
                 );
             }
@@ -50,6 +51,7 @@ const ResetPasswordScreen = ({ navigation, route }: any) => {
 
     return (
         <SafeAreaView style={styles.container}>
+            <DiagonalStreaksBackground />
             <View style={[styles.header, { paddingTop: Platform.OS === 'android' ? insets.top + 10 : 10 }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
                     <ChevronLeft color={COLORS.white} size={28} />

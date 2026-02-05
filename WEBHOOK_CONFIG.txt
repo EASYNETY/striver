@@ -1,0 +1,39 @@
+========================================
+ONDATO WEBHOOK CONFIGURATION
+========================================
+
+Webhook URL:
+https://ondatowebhook-hphu25tfqq-uc.a.run.app
+
+Authentication Type:
+Basic Auth
+
+Username:
+striver_webhook
+
+Password:
+striver_secure_webhook_2024
+
+Events to Subscribe:
+- KycIdentification.Approved
+- KycIdentification.Rejected
+
+========================================
+CONFIGURATION STEPS
+========================================
+
+1. Go to: https://admin.ondato.com
+2. Navigate to: Settings > Webhooks
+3. Click: "Add Webhook"
+4. Paste the details above
+5. Save
+
+========================================
+TEST AFTER CONFIGURATION
+========================================
+
+Run: node test-webhook-simple.js
+
+Or: .\test-webhook.bat
+
+========================================

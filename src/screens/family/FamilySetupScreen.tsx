@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, Image } from 'react-native';
 import { COLORS, SPACING } from '../../constants/theme';
 import { ChevronLeft, Plus, UserCircle2, Settings, ShieldCheck } from 'lucide-react-native';
-import { db } from '../../api/firebase';
+import { modularDb } from '../../api/firebase';
+import { collection, doc, onSnapshot, query } from '@react-native-firebase/firestore';
 import userService from '../../api/userService';
 
 const FamilySetupScreen = ({ navigation, route }: any) => {
@@ -13,29 +14,31 @@ const FamilySetupScreen = ({ navigation, route }: any) => {
     useEffect(() => {
         if (!uid) return;
 
-        // Sync with Firestore children subcollection
-        const unsubscribe = db.collection('users')
-            .doc(uid)
-            .collection('children')
-            .onSnapshot(snapshot => {
-                const childList = snapshot.docs.map(doc => {
-                    const data = doc.data();
-                    // Basic age calculation from DD/MM/YYYY
-                    let age = '?';
-                    if (data.dob) {
-                        try {
-                            const parts = data.dob.split('/');
-                            const dobDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-                            const diff = Date.now() - dobDate.getTime();
-                            age = Math.floor(diff / (1000 * 60 * 60 * 24 * 365.25)).toString();
-                        } catch (e) { }
-                    }
-                    return { id: doc.id, ...data, age };
-                });
-                setChildren(childList);
-            }, error => {
-                console.error("Error fetching children:", error);
+        // Sync with Firestore children subcollection using modular API
+        const q = query(collection(doc(modularDb, 'users', uid), 'children'));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            if (!snapshot) {
+                console.warn('Children snapshot is null');
+                return;
+            }
+            const childList = snapshot.docs.map(docSnap => {
+                const data = docSnap.data();
+                // Basic age calculation from DD/MM/YYYY
+                let age = '?';
+                if (data.dob) {
+                    try {
+                        const parts = data.dob.split('/');
+                        const dobDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                        const diff = Date.now() - dobDate.getTime();
+                        age = Math.floor(diff / (1000 * 60 * 60 * 24 * 365.25)).toString();
+                    } catch (e) { }
+                }
+                return { id: docSnap.id, ...data, age };
             });
+            setChildren(childList);
+        }, error => {
+            console.error("Error fetching children (FamilySetup):", error);
+        });
 
         // Sync approvals
         const approvalsUnsubscribe = userService.getApprovalsListener(uid, (data) => {
@@ -74,7 +77,7 @@ const FamilySetupScreen = ({ navigation, route }: any) => {
                             <Text style={styles.parentName}>Family Manager</Text>
                             <View style={styles.badge}>
                                 <ShieldCheck color={COLORS.primary} size={12} />
-                                <Text style={styles.badgeText}>Verified Parent</Text>
+                                <Text style={badgeTextStyles.text}>Verified Parent</Text>
                             </View>
                         </View>
                     </View>
@@ -86,7 +89,7 @@ const FamilySetupScreen = ({ navigation, route }: any) => {
                         {approvals.map(approval => (
                             <View key={approval.id} style={styles.approvalCard}>
                                 <View style={styles.approvalInfo}>
-                                    <Text style={styles.approvalTitle}>{approval.title}</Text>
+                                    <Text style={styles.approvalTitle}>{approval.title || 'Reward Request'}</Text>
                                     <View style={styles.approvalActions}>
                                         <TouchableOpacity
                                             style={[styles.actionBtn, { borderColor: '#FF3B30' }]}
@@ -118,7 +121,7 @@ const FamilySetupScreen = ({ navigation, route }: any) => {
                     <FlatList
                         data={children}
                         renderItem={({ item }) => (
-                            <TouchableOpacity style={styles.childCard}>
+                            <TouchableOpacity style={styles.childCard} onPress={() => navigation.navigate('ChildProfile', { uid, childId: item.id, mode: 'edit' })}>
                                 <View style={styles.childAvatar} />
                                 <View style={styles.childInfo}>
                                     <Text style={styles.childName}>{item.displayName}</Text>
@@ -152,6 +155,14 @@ const FamilySetupScreen = ({ navigation, route }: any) => {
         </SafeAreaView>
     );
 };
+
+const badgeTextStyles = StyleSheet.create({
+    text: {
+        fontSize: 12,
+        color: COLORS.primary,
+        fontWeight: '600',
+    }
+});
 
 const styles = StyleSheet.create({
     container: {
@@ -207,11 +218,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 4,
         marginTop: 4,
-    },
-    badgeText: {
-        fontSize: 12,
-        color: COLORS.primary,
-        fontWeight: '600',
     },
     sectionTitle: {
         fontSize: 18,

@@ -1,5 +1,24 @@
-import { db, firebaseAuth, firebaseStorage } from '../api/firebase';
-import firestore from '@react-native-firebase/firestore';
+import { db, modularDb, firebaseAuth, firebaseStorage } from '../api/firebase';
+import {
+    collection,
+    doc,
+    getDoc,
+    getDocs,
+    setDoc,
+    updateDoc,
+    deleteDoc,
+    addDoc,
+    onSnapshot,
+    query,
+    where,
+    limit,
+    orderBy,
+    serverTimestamp,
+    increment,
+    arrayUnion,
+    arrayRemove,
+    FieldValue
+} from '@react-native-firebase/firestore';
 import userService from './userService';
 
 export interface Squad {
@@ -10,32 +29,29 @@ export interface Squad {
     creatorId: string;
     members: string[];
     memberCount: number;
-    isPremium: boolean;
-    price?: string;
-    isPrivate: boolean; // Invite only
+    isPrivate: boolean;
     capacity: number;
-    kudosCost?: number; // Cost to join in Kudos
+    kudosCost?: number;
     inviteCode?: string;
     tags?: string[];
     rules?: string;
-    premiumBenefits?: string[];
-    createdAt: Date;
+    ageRestriction: 'all' | '13+' | '18+';
+    createdAt: any;
 }
 
 class SquadService {
-    private squadsCollection = db.collection('squads');
-    private squadMembersCollection = db.collection('squadMembers');
+    private squadsCollection = collection(modularDb, 'squads');
+    private squadMembersCollection = collection(modularDb, 'squadMembers');
 
     // Create a new squad
     async createSquad(data: {
         name: string;
         description: string;
         imageUri?: string;
-        isPremium?: boolean;
-        price?: string;
         isPrivate?: boolean;
         capacity?: number;
         kudosCost?: number;
+        ageRestriction?: 'all' | '13+' | '18+';
     }): Promise<string> {
         const currentUser = firebaseAuth.currentUser;
         if (!currentUser) throw new Error('Not authenticated');
@@ -58,23 +74,22 @@ class SquadService {
             creatorId: currentUser.uid,
             members: [currentUser.uid],
             memberCount: 1,
-            isPremium: data.isPremium || false,
-            price: data.price || '',
             isPrivate: data.isPrivate || false,
-            capacity: data.capacity || 50, // Default capacity
+            capacity: data.capacity || 50,
             kudosCost: data.kudosCost || 0,
+            ageRestriction: data.ageRestriction || 'all',
             inviteCode,
-            createdAt: firestore.FieldValue.serverTimestamp(),
+            createdAt: serverTimestamp(),
         };
 
-        const docRef = await this.squadsCollection.add(squadData);
+        const docRef = await addDoc(this.squadsCollection, squadData);
 
         // Add creator as first member
-        await this.squadMembersCollection.add({
+        await addDoc(this.squadMembersCollection, {
             squadId: docRef.id,
             userId: currentUser.uid,
-            role: 'owner', // Creator is owner
-            joinedAt: firestore.FieldValue.serverTimestamp(),
+            role: 'owner',
+            joinedAt: serverTimestamp(),
         });
 
         return docRef.id;
@@ -82,9 +97,8 @@ class SquadService {
 
     // Get all squads
     async getAllSquads(): Promise<Squad[]> {
-        const snapshot = await this.squadsCollection
-            .orderBy('memberCount', 'desc')
-            .get();
+        const q = query(this.squadsCollection, orderBy('memberCount', 'desc'));
+        const snapshot = await getDocs(q);
 
         return snapshot.docs.map(doc => ({
             id: doc.id,
@@ -94,9 +108,8 @@ class SquadService {
 
     // Get user's squads
     async getUserSquads(userId: string): Promise<Squad[]> {
-        const snapshot = await this.squadsCollection
-            .where('members', 'array-contains', userId)
-            .get();
+        const q = query(this.squadsCollection, where('members', 'array-contains', userId));
+        const snapshot = await getDocs(q);
 
         return snapshot.docs.map(doc => ({
             id: doc.id,
@@ -106,18 +119,17 @@ class SquadService {
 
     // Get count of squads owned by user
     async getOwnedSquadsCount(userId: string): Promise<number> {
-        const snapshot = await this.squadsCollection
-            .where('creatorId', '==', userId)
-            .get();
+        const q = query(this.squadsCollection, where('creatorId', '==', userId));
+        const snapshot = await getDocs(q);
         return snapshot.size;
     }
 
     // Get squad by ID
     async getSquad(squadId: string): Promise<Squad | null> {
-        const doc = await this.squadsCollection.doc(squadId).get();
-        if (!doc.exists) return null;
+        const docSnap = await getDoc(doc(this.squadsCollection, squadId));
+        if (!docSnap.exists) return null;
 
-        return { id: doc.id, ...doc.data() } as Squad;
+        return { id: docSnap.id, ...docSnap.data() } as Squad;
     }
 
     // Join a squad
@@ -125,16 +137,16 @@ class SquadService {
         const currentUser = firebaseAuth.currentUser;
         if (!currentUser) throw new Error('Not authenticated');
 
-        await this.squadsCollection.doc(squadId).update({
-            members: firestore.FieldValue.arrayUnion(currentUser.uid),
-            memberCount: firestore.FieldValue.increment(1),
+        await updateDoc(doc(this.squadsCollection, squadId), {
+            members: arrayUnion(currentUser.uid),
+            memberCount: increment(1),
         });
 
-        await this.squadMembersCollection.add({
+        await addDoc(this.squadMembersCollection, {
             squadId,
             userId: currentUser.uid,
             role: 'member',
-            joinedAt: firestore.FieldValue.serverTimestamp(),
+            joinedAt: serverTimestamp(),
         });
     }
 
@@ -143,26 +155,28 @@ class SquadService {
         const currentUser = firebaseAuth.currentUser;
         if (!currentUser) throw new Error('Not authenticated');
 
-        await this.squadsCollection.doc(squadId).update({
-            members: firestore.FieldValue.arrayRemove(currentUser.uid),
-            memberCount: firestore.FieldValue.increment(-1),
+        await updateDoc(doc(this.squadsCollection, squadId), {
+            members: arrayRemove(currentUser.uid),
+            memberCount: increment(-1),
         });
 
         // Remove member record
-        const memberSnapshot = await this.squadMembersCollection
-            .where('squadId', '==', squadId)
-            .where('userId', '==', currentUser.uid)
-            .get();
+        const q = query(
+            this.squadMembersCollection,
+            where('squadId', '==', squadId),
+            where('userId', '==', currentUser.uid)
+        );
+        const memberSnapshot = await getDocs(q);
 
-        memberSnapshot.docs.forEach(doc => doc.ref.delete());
+        for (const doc of memberSnapshot.docs) {
+            await deleteDoc(doc.ref);
+        }
     }
 
     // Join squad with invite code
     async joinSquadWithCode(inviteCode: string): Promise<string> {
-        const snapshot = await this.squadsCollection
-            .where('inviteCode', '==', inviteCode)
-            .limit(1)
-            .get();
+        const q = query(this.squadsCollection, where('inviteCode', '==', inviteCode), limit(1));
+        const snapshot = await getDocs(q);
 
         if (snapshot.empty) {
             throw new Error('Invalid invite code');
@@ -176,11 +190,43 @@ class SquadService {
 
     // Check if user is member of squad
     async isMember(squadId: string, userId: string): Promise<boolean> {
-        const doc = await this.squadsCollection.doc(squadId).get();
-        if (!doc.exists) return false;
+        const docSnap = await getDoc(doc(this.squadsCollection, squadId));
+        if (!docSnap.exists) return false;
 
-        const squad = doc.data() as Squad;
+        const squad = docSnap.data() as Squad;
         return squad.members.includes(userId);
+    }
+
+    // Check if user can join squad based on age restriction
+    async canJoinSquad(squadId: string, userId: string): Promise<{ canJoin: boolean; reason?: string }> {
+        const squad = await this.getSquad(squadId);
+        if (!squad) return { canJoin: false, reason: 'Squad not found' };
+
+        const userProfile = await userService.getUserProfile(userId);
+        if (!userProfile) return { canJoin: false, reason: 'User profile not found' };
+
+        // Check age restriction
+        if (squad.ageRestriction === '18+') {
+            if (userProfile.ageTier === 'junior_baller' || userProfile.ageTier === 'academy_prospect') {
+                return { canJoin: false, reason: 'This squad is restricted to users 18 and older' };
+            }
+        } else if (squad.ageRestriction === '13+') {
+            if (userProfile.ageTier === 'junior_baller') {
+                return { canJoin: false, reason: 'This squad is restricted to users 13 and older' };
+            }
+        }
+
+        // Check if already a member
+        if (squad.members.includes(userId)) {
+            return { canJoin: false, reason: 'Already a member' };
+        }
+
+        // Check capacity
+        if (squad.memberCount >= squad.capacity) {
+            return { canJoin: false, reason: 'Squad is at full capacity' };
+        }
+
+        return { canJoin: true };
     }
 
     // Upload squad image
@@ -194,17 +240,16 @@ class SquadService {
 
     // Update squad details (Admin/Creator only)
     async updateSquad(squadId: string, data: Partial<Squad>): Promise<void> {
-        await this.squadsCollection.doc(squadId).update({
+        await updateDoc(doc(this.squadsCollection, squadId), {
             ...data,
-            updatedAt: firestore.FieldValue.serverTimestamp(),
+            updatedAt: serverTimestamp(),
         });
     }
 
     // Get members of a squad
     async getSquadMembers(squadId: string): Promise<any[]> {
-        const snapshot = await this.squadMembersCollection
-            .where('squadId', '==', squadId)
-            .get();
+        const q = query(this.squadMembersCollection, where('squadId', '==', squadId));
+        const snapshot = await getDocs(q);
 
         const memberData = snapshot.docs.map(doc => doc.data());
 
@@ -224,30 +269,28 @@ class SquadService {
 
     // Create a squad challenge
     async createChallenge(squadId: string, data: { title: string, description: string, reward: number, durationDays: number }): Promise<string> {
-        const docRef = await db.collection('squadChallenges').add({
+        const docRef = await addDoc(collection(modularDb, 'squadChallenges'), {
             squadId,
             ...data,
             isActive: true,
             participantCount: 0,
-            createdAt: firestore.FieldValue.serverTimestamp(),
+            createdAt: serverTimestamp(),
         });
         return docRef.id;
     }
 
     // Get squad challenges
     async getSquadChallenges(squadId: string): Promise<any[]> {
-        const snapshot = await db.collection('squadChallenges')
-            .where('squadId', '==', squadId)
-            .get();
+        const q = query(collection(modularDb, 'squadChallenges'), where('squadId', '==', squadId));
+        const snapshot = await getDocs(q);
 
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     }
 
     // Get squad leaderboard
     async getSquadLeaderboard(squadId: string): Promise<any[]> {
-        const snapshot = await this.squadMembersCollection
-            .where('squadId', '==', squadId)
-            .get();
+        const q = query(this.squadMembersCollection, where('squadId', '==', squadId));
+        const snapshot = await getDocs(q);
 
         const memberData = snapshot.docs.map(doc => doc.data());
 
@@ -271,9 +314,9 @@ class SquadService {
 
     // Subscribe to squad updates
     subscribeToSquad(squadId: string, callback: (squad: Squad | null) => void): () => void {
-        return this.squadsCollection.doc(squadId).onSnapshot(doc => {
-            if (doc.exists) {
-                callback({ id: doc.id, ...doc.data() } as Squad);
+        return onSnapshot(doc(this.squadsCollection, squadId), docSnap => {
+            if (docSnap.exists) {
+                callback({ id: docSnap.id, ...docSnap.data() } as Squad);
             } else {
                 callback(null);
             }

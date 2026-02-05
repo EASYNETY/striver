@@ -4,9 +4,10 @@ import { COLORS, SPACING } from '../../constants/theme';
 import { ChevronLeft, Calendar, ArrowRight } from 'lucide-react-native';
 import userService from '../../api/userService';
 import { logEvent, EVENTS } from '../../utils/analytics';
+import { DiagonalStreaksBackground } from '../../components/common/DiagonalStreaksBackground';
 
 const DateOfBirthScreen = ({ navigation, route }: any) => {
-    const { uid, accountType: initialAccountType } = route.params || {};
+    const { uid, accountType: initialAccountType, signupMethod } = route.params || {};
     const [accountType, setAccountType] = useState(initialAccountType);
     const [dob, setDob] = useState('');
     const [loading, setLoading] = useState(false);
@@ -45,15 +46,16 @@ const DateOfBirthScreen = ({ navigation, route }: any) => {
 
             if (accountType === 'family') {
                 if (age < 18) {
-                    Alert.alert('Parent Required', 'A parent or guardian must be 18+ to manage a family account.');
+                    Alert.alert('Hold Up!', 'Family accounts need a parent or guardian who\'s 18+.');
                     return;
                 }
-                navigation.navigate('VerifyAge', { uid, accountType });
+                // Navigate to the new VerifyIdentity (Ondato) screen for parents
+                navigation.navigate('VerifyIdentity', { uid, dateOfBirth: dob, accountType });
             } else {
                 if (age < 13) {
                     Alert.alert(
-                        'Junior Baller Detected',
-                        'Users under 13 must use a Family Account managed by a parent. Would you like to switch?',
+                        'Young Baller!',
+                        'Under 13? No worries! You\'ll need a parent to set up a Family Account. Want to switch?',
                         [
                             { text: 'Switch to Family', onPress: () => navigation.navigate('AccountType') },
                             { text: 'Cancel', style: 'cancel' }
@@ -62,11 +64,11 @@ const DateOfBirthScreen = ({ navigation, route }: any) => {
                     return;
                 }
 
-                // For individuals 13-17 or 18+
+                // For individuals: 13-17 go to manual, 18+ go to Ondato
                 if (age < 18) {
                     navigation.navigate('VerifyAge', { uid, accountType });
                 } else {
-                    navigation.navigate('InterestsSelection', { uid });
+                    navigation.navigate('VerifyIdentity', { uid, dateOfBirth: dob, accountType });
                 }
             }
         } catch (error) {
@@ -79,6 +81,7 @@ const DateOfBirthScreen = ({ navigation, route }: any) => {
 
     return (
         <SafeAreaView style={styles.container}>
+            <DiagonalStreaksBackground />
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()}>
                     <ChevronLeft color={COLORS.white} size={28} />
@@ -93,7 +96,7 @@ const DateOfBirthScreen = ({ navigation, route }: any) => {
 
                 <Text style={styles.title}>When's your birthday?</Text>
                 <Text style={styles.subtitle}>
-                    This helps us customize your experience and keep the community safe.
+                    This helps us customise your experience and keep the community safe.
                 </Text>
 
                 <View style={styles.inputBox}>

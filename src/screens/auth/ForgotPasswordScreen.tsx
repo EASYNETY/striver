@@ -5,6 +5,7 @@ import { db } from '../../api/firebase';
 import emailService from '../../api/emailService';
 import { COLORS, SPACING } from '../../constants/theme';
 import { Mail, ChevronLeft, ArrowRight } from 'lucide-react-native';
+import { DiagonalStreaksBackground } from '../../components/common/DiagonalStreaksBackground';
 
 const ForgotPasswordScreen = ({ navigation }: any) => {
     const insets = useSafeAreaInsets();
@@ -40,8 +41,8 @@ const ForgotPasswordScreen = ({ navigation }: any) => {
             await emailService.sendOTP(email, otp, 'email');
 
             Alert.alert(
-                'Verification Sent',
-                'A 6-digit code has been sent to your email to verify your identity.',
+                'Code Sent!',
+                'Check your email - we just sent you a 6-digit code!',
                 [
                     {
                         text: 'Continue',
@@ -63,6 +64,7 @@ const ForgotPasswordScreen = ({ navigation }: any) => {
 
     return (
         <SafeAreaView style={styles.container}>
+            <DiagonalStreaksBackground />
             <View style={[styles.header, { paddingTop: Platform.OS === 'android' ? insets.top + 10 : 10 }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
                     <ChevronLeft color={COLORS.white} size={28} />

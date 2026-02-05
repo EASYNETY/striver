@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldCheck, Mail, Lock, Loader2, AlertCircle, ArrowRight } from 'lucide-react';
 import { auth } from './firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, signInAnonymously } from 'firebase/auth';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from './firebase';
 
 interface LoginProps {
     onLoginSuccess: (user: any) => void;
@@ -24,14 +26,36 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
         try {
             if (email === DEFAULT_USER && password === DEFAULT_PASS) {
-                onLoginSuccess({ email: DEFAULT_USER, uid: 'admin-mock-id', displayName: 'System Administrator' });
+                // Sign in anonymously to provide a valid Firebase Auth context
+                const cred = await signInAnonymously(auth);
+
+                // Bootstrap the real admin document in Firestore to enable permissions
+                await setDoc(doc(db, 'users', cred.user.uid), {
+                    email: DEFAULT_USER,
+                    username: 'ROOT_ADMIN',
+                    role: 'super_admin',
+                    lastLogin: serverTimestamp(),
+                    isMock: true
+                }, { merge: true });
+
+                onLoginSuccess({
+                    ...cred.user,
+                    email: DEFAULT_USER,
+                    role: 'super_admin',
+                    displayName: 'System Root'
+                });
                 return;
             }
 
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             onLoginSuccess(userCredential.user);
         } catch (err: any) {
-            setError('Access Denied: Invalid Administrative Credentials');
+            console.error(err);
+            if (err.code === 'auth/operation-not-allowed') {
+                setError('SYSTEM ERROR: Anonymous Auth is disabled in Firebase Console.');
+            } else {
+                setError('Access Denied: Invalid Administrative Credentials');
+            }
         } finally {
             setLoading(false);
         }
@@ -55,9 +79,9 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                     <div className="flex flex-col items-center mb-12">
                         <motion.div
                             whileHover={{ scale: 1.05, rotate: 5 }}
-                            className="w-24 h-24 bg-[#8FFBB9] rounded-[32px] flex items-center justify-center mb-8 shadow-[0_20px_40px_rgba(143,251,185,0.25)]"
+                            className="w-24 h-24 bg-[#8FFBB9] rounded-[32px] overflow-hidden flex items-center justify-center mb-8 shadow-[0_20px_40px_rgba(143,251,185,0.25)]"
                         >
-                            <ShieldCheck size={48} className="text-[#050811]" />
+                            <img src="/icon.png" className="w-16 h-16 object-contain" alt="Striver" />
                         </motion.div>
 
                         <h1 className="text-4xl font-black text-white italic uppercase tracking-tighter sm:text-5xl glow-text leading-none">

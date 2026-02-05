@@ -4,6 +4,7 @@ import { COLORS, SPACING } from '../../constants/theme';
 import { ChevronLeft, ShieldCheck, Mail, Phone, CheckCircle } from 'lucide-react-native';
 import userService from '../../api/userService';
 import { firebaseAuth } from '../../api/firebase';
+import { DiagonalStreaksBackground } from '../../components/common/DiagonalStreaksBackground';
 
 const OTPVerificationScreen = ({ navigation, route }: any) => {
     const { uid, email, phoneNumber, verificationMethod = 'email', accountType: initialAccountType, confirmation } = route.params || {};
@@ -50,9 +51,12 @@ const OTPVerificationScreen = ({ navigation, route }: any) => {
         try {
             await firebaseAuth.currentUser?.reload();
             if (firebaseAuth.currentUser?.emailVerified) {
-                // Success
-                Alert.alert('Success', 'Email verified successfully!');
-                navigation.replace('DateOfBirth', { uid: firebaseAuth.currentUser.uid, accountType });
+                // Email verified - navigate to DateOfBirth screen
+                navigation.replace('DateOfBirth', {
+                    uid: firebaseAuth.currentUser.uid,
+                    accountType,
+                    signupMethod: 'email'
+                });
             }
         } catch (error) {
             console.log('Verification check failed', error);
@@ -84,7 +88,14 @@ const OTPVerificationScreen = ({ navigation, route }: any) => {
                 // If not verified yet:
                 await firebaseAuth.currentUser?.reload();
                 if (!firebaseAuth.currentUser?.emailVerified) {
-                    Alert.alert('Not Verified', 'We haven\'t received the verification yet. Please check your email and click the link.');
+                    Alert.alert('Almost There!', 'Check your email and tap that link. We\'re waiting for you!');
+                } else {
+                    // Email verified successfully - navigate to DateOfBirth screen
+                    navigation.replace('DateOfBirth', {
+                        uid: firebaseAuth.currentUser.uid,
+                        accountType,
+                        signupMethod: 'email'
+                    });
                 }
             } else {
                 // PHONE AUTH
@@ -105,20 +116,44 @@ const OTPVerificationScreen = ({ navigation, route }: any) => {
                                 accountType: accountType || 'individual',
                             });
                         }
-                        navigation.navigate('DateOfBirth', { uid: userCredential.user.uid, accountType });
+
+                        // Phone signup goes to DateOfBirth screen
+                        navigation.replace('DateOfBirth', {
+                            uid: userCredential.user.uid,
+                            accountType,
+                            signupMethod: 'phone'
+                        });
                     }
                 } else {
                     // Mock/Dev fallback (if confirmation prop is missing)
                     if (fullCode === '123456') {
-                        navigation.navigate('DateOfBirth', { uid, accountType });
-                    } else {
+                        console.log('Using mock code 123456. Signing in anonymously for testing...');
+                        // Sign in anonymously so we have a real UID and auth session for functions
+                        const userCredential = await firebaseAuth.signInAnonymously();
+
+                        // Create a mock profile if it doesn't exist
+                        const profile = await userService.getUserProfile(userCredential.user.uid);
+                        if (!profile) {
+                            await userService.createUserProfile(userCredential.user.uid, {
+                                phoneNumber: phoneNumber || '+15550000000',
+                                accountType: accountType || 'individual',
+                            });
+                        }
+
+                        navigation.replace('DateOfBirth', {
+                            uid: userCredential.user.uid,
+                            accountType,
+                            signupMethod: 'phone'
+                        });
+                    }
+                    else {
                         Alert.alert('Error', 'Invalid code or missing confirmation object.');
                     }
                 }
             }
         } catch (error: any) {
             console.error(error);
-            Alert.alert('Verification Failed', error.message || 'Invalid code');
+            Alert.alert('Oops!', error.message || 'That code didn\'t work. Give it another shot!');
         } finally {
             setLoading(false);
         }
@@ -131,7 +166,7 @@ const OTPVerificationScreen = ({ navigation, route }: any) => {
         try {
             if (verificationMethod === 'email') {
                 await firebaseAuth.currentUser?.sendEmailVerification();
-                Alert.alert('Sent', `Verification link sent to ${email}`);
+                Alert.alert('You\'re In!', `Check ${email} - your link is on the way!`);
             } else {
                 // Phone resend logic would require passing the phoneNumber and recalling signInWithPhoneNumber
                 // For now we just reset timer or show alert
@@ -147,6 +182,7 @@ const OTPVerificationScreen = ({ navigation, route }: any) => {
 
     return (
         <SafeAreaView style={styles.container}>
+            <DiagonalStreaksBackground />
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()}>
                     <ChevronLeft color={COLORS.white} size={28} />

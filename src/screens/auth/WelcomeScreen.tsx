@@ -10,12 +10,24 @@ const WelcomeScreen = ({ navigation }: any) => {
     useEffect(() => {
         logEvent(EVENTS.FIRST_OPEN);
 
-        // If user is already logged in but stuck here (onboarding incomplete)
-        // Redirect them to the next relevant step
-        const user = firebaseAuth.currentUser;
-        if (user) {
-            navigation.navigate('OTPVerification', { uid: user.uid });
-        }
+        // Smarter redirect for users returning to the app mid-onboarding
+        const checkStatusAndRedirect = async () => {
+            const user = firebaseAuth.currentUser;
+            if (user) {
+                // If they have a phone number, they are already verified
+                if (user.phoneNumber) {
+                    navigation.navigate('DateOfBirth', { uid: user.uid, signupMethod: 'phone' });
+                } else if (user.email && !user.emailVerified) {
+                    // Only email users who aren't verified yet should go here
+                    navigation.navigate('OTPVerification', { uid: user.uid, email: user.email, verificationMethod: 'email' });
+                } else {
+                    // Default fallback
+                    navigation.navigate('AccountType');
+                }
+            }
+        };
+
+        checkStatusAndRedirect();
     }, [navigation]);
 
     return (
@@ -32,7 +44,6 @@ const WelcomeScreen = ({ navigation }: any) => {
                     resizeMode="cover"
                     playInBackground={true}
                     playWhenInactive={true}
-                    ignoreSilentBadge={true}
                     rate={1.0}
                 />
                 <View style={[styles.overlay, { backgroundColor: 'rgba(10, 17, 40, 0.7)' }]} />
@@ -49,15 +60,16 @@ const WelcomeScreen = ({ navigation }: any) => {
                         </View>
                         <View style={styles.logoShadow} />
                     </View>
-                    <Text style={styles.appName}>striver</Text>
+                    {/* <Text style={styles.appName}>striver</Text> */}
                     <View style={styles.taglineRow}>
                         <Trophy color={COLORS.primary} size={14} />
-                        <Text style={styles.taglineText}>THE FUTURE OF FOOTBALL</Text>
+                        <Text style={styles.taglineText}>FOOTBALL HAS A NEW VOICE</Text>
                     </View>
                 </View>
 
                 <View style={styles.ctaContainer}>
                     <TouchableOpacity
+                        activeOpacity={0.85}
                         style={styles.primaryBtn}
                         onPress={() => navigation.navigate('AccountType')}
                     >
@@ -65,10 +77,16 @@ const WelcomeScreen = ({ navigation }: any) => {
                     </TouchableOpacity>
 
                     <TouchableOpacity
+                        activeOpacity={0.85}
                         style={styles.secondaryBtn}
-                        onPress={() => navigation.navigate('SignUp', { mode: 'login' })}
+                        onPress={() =>
+                            navigation.navigate('SignUp', {
+                                mode: 'login',
+                                accountType: 'individual',
+                            })
+                        }
                     >
-                        <Text style={styles.secondaryBtnText}>Login</Text>
+                        <Text style={styles.secondaryBtnText}>Log In</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -86,17 +104,6 @@ const styles = StyleSheet.create({
     },
     backgroundVideo: {
         ...StyleSheet.absoluteFillObject,
-    },
-    videoPlaceholder: {
-        flex: 1,
-        backgroundColor: '#151c3a',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    videoText: {
-        color: 'rgba(255,255,255,0.2)',
-        fontSize: 18,
-        fontWeight: '700',
     },
     overlay: {
         flex: 1,
@@ -146,7 +153,7 @@ const styles = StyleSheet.create({
     appName: {
         fontSize: 56,
         fontWeight: '900',
-        fontFamily: FONTS.bold,
+        fontFamily: FONTS.display.bold,
         color: COLORS.white,
         letterSpacing: -3,
         textTransform: 'lowercase',
@@ -162,15 +169,32 @@ const styles = StyleSheet.create({
         borderRadius: 20,
     },
     taglineText: {
-        fontSize: 12,
-        fontFamily: FONTS.medium,
+        fontSize: 16,
+        fontFamily: FONTS.body.regular,
         color: COLORS.white,
-        fontWeight: '700',
-        letterSpacing: 2,
+        marginTop: 8,
+        opacity: 0.9,
     },
     ctaContainer: {
         gap: SPACING.md,
         marginBottom: SPACING.xxl,
+    },
+    divider: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginVertical: SPACING.sm,
+        gap: 12,
+    },
+    line: {
+        flex: 1,
+        height: 1,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+    },
+    dividerText: {
+        color: COLORS.textSecondary,
+        fontSize: 12,
+        fontWeight: '700',
+        letterSpacing: 1,
     },
     primaryBtn: {
         height: 56,
@@ -181,6 +205,7 @@ const styles = StyleSheet.create({
     },
     primaryBtnText: {
         fontSize: 18,
+        fontFamily: FONTS.display.medium,
         fontWeight: '700',
         color: COLORS.background,
     },
@@ -194,8 +219,21 @@ const styles = StyleSheet.create({
     },
     secondaryBtnText: {
         fontSize: 18,
+        fontFamily: FONTS.display.medium,
         fontWeight: '700',
         color: COLORS.white,
+    },
+    textBtn: {
+        paddingVertical: SPACING.md,
+        alignItems: 'center',
+    },
+    textBtnText: {
+        fontSize: 14,
+        color: COLORS.textSecondary,
+    },
+    textBtnHighlight: {
+        color: COLORS.primary,
+        fontWeight: '700',
     },
 });
 

@@ -4,6 +4,7 @@ import { COLORS, SPACING } from '../../constants/theme';
 import { Send, ChevronLeft, Heart } from 'lucide-react-native';
 import postService, { Comment } from '../../api/postService';
 import { formatDistanceToNow } from 'date-fns';
+import { DiagonalStreaksBackground } from '../../components/common/DiagonalStreaksBackground';
 
 const CommentsScreen = ({ navigation, route }: any) => {
     const { postId } = route.params;
@@ -60,6 +61,7 @@ const CommentsScreen = ({ navigation, route }: any) => {
 
     return (
         <SafeAreaView style={styles.container}>
+            <DiagonalStreaksBackground />
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
                     <ChevronLeft color={COLORS.white} size={28} />

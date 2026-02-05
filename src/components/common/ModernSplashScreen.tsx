@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Dimensions, StatusBar, useWindowDimensions } from 'react-native';
 import { SvgXml } from 'react-native-svg';
-import { COLORS } from '../../constants/theme';
+import { COLORS, FONTS } from '../../constants/theme';
 
 // Striver Logo SVG Content
 const STRIVER_SVG = `
@@ -118,6 +118,11 @@ const ModernSplashScreen = () => {
                     <Text style={styles.logoText}>STRIVER</Text>
                 </View>
 
+                {/* Tagline */}
+                <Animated.Text style={[styles.tagline, { opacity: textOpacity }]}>
+                    Empowering the next generation
+                </Animated.Text>
+
                 {/* Loading Elements */}
                 <View style={{ alignItems: 'center' }}>
                     <Animated.View style={[styles.progressBar, {
@@ -166,6 +171,14 @@ const styles = StyleSheet.create({
         letterSpacing: 1,
         fontFamily: 'Montserrat-Bold',
         fontStyle: 'italic',
+    },
+    tagline: {
+        marginTop: 24,
+        fontSize: 18,
+        fontFamily: FONTS.display.semiBold,
+        color: COLORS.primary,
+        letterSpacing: 0.5,
+        textAlign: 'center',
     },
     loadingText: {
         marginTop: 40,

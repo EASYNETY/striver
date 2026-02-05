@@ -3,19 +3,18 @@ import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-na
 import { COLORS, SPACING } from '../../constants/theme';
 import { Users, User, ArrowRight } from 'lucide-react-native';
 import { logEvent, EVENTS } from '../../utils/analytics';
+import { DiagonalStreaksBackground } from '../../components/common/DiagonalStreaksBackground';
 
 const AccountTypeScreen = ({ navigation }: any) => {
     const handleSelection = (type: 'family' | 'individual') => {
         logEvent(EVENTS.ACCOUNT_TYPE_SELECTED, { type });
-        if (type === 'family') {
-            navigation.navigate('SignUp', { accountType: 'family' });
-        } else {
-            navigation.navigate('SignUp', { accountType: 'individual' });
-        }
+        // Navigate to signup method selection with account type
+        navigation.navigate('SignUpMethod', { accountType: type });
     };
 
     return (
         <SafeAreaView style={styles.container}>
+            <DiagonalStreaksBackground />
             <View style={styles.content}>
                 <Text style={styles.title}>Choose your experience</Text>
                 <Text style={styles.subtitle}>Select the account type that's right for you</Text>

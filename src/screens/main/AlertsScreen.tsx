@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, SafeAreaView, FlatList, TouchableOpacity, Image
 import { COLORS, SPACING } from '../../constants/theme';
 import { Bell, Heart, MessageSquare, UserPlus, Trophy, ChevronRight, Star } from 'lucide-react-native';
 import { firebaseAuth, db } from '../../api/firebase';
+import { DiagonalStreaksBackground } from '../../components/common/DiagonalStreaksBackground';
 
 interface Alert {
     id: string;
@@ -162,6 +163,7 @@ const AlertsScreen = ({ navigation }: any) => {
 
     return (
         <SafeAreaView style={styles.container}>
+            <DiagonalStreaksBackground />
             <View style={styles.header}>
                 <Text style={styles.headerTitle}>Activity</Text>
             </View>

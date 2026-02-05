@@ -1,0 +1,32 @@
+// Add these rules to your firestore.rules file
+
+// Verification Attempts Collection
+match /verification_attempts/{attemptId} {
+  // Users can read their own verification attempts
+  allow read: if request.auth != null && 
+              (resource.data.userId == request.auth.uid || 
+               request.auth.token.admin == true);
+  
+  // Users can create their own verification attempts
+  allow create: if request.auth != null && 
+                request.resource.data.userId == request.auth.uid &&
+                request.resource.data.status == 'pending';
+  
+  // Only admins can update verification attempts
+  allow update: if request.auth != null && 
+                request.auth.token.admin == true;
+  
+  // Only admins can delete verification attempts
+  allow delete: if request.auth != null && 
+                request.auth.token.admin == true;
+}
+
+// App Settings Collection (for future admin toggle)
+match /appSettings/{document} {
+  // Everyone can read app settings
+  allow read: if true;
+  
+  // Only admins can write app settings
+  allow write: if request.auth != null && 
+               request.auth.token.admin == true;
+}

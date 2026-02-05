@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions } from 'react-native';
-import Video from 'react-native-video';
+import HLSVideoPlayer from './HLSVideoPlayer';
 import { Heart, MessageCircle, Share2, UserCheck, UserPlus } from 'lucide-react-native';
 import { COLORS, SPACING } from '../constants/theme';
 import { Post } from '../api/postService';
@@ -45,22 +45,12 @@ const FeedItem = ({
 
     return (
         <View style={styles.container}>
-            <Video
-                ref={videoRef}
-                source={{ uri: item.videoUrl }}
-                style={styles.video}
-                resizeMode="cover"
-                repeat={true}
+            <HLSVideoPlayer
+                videoUrl={item.videoUrl}
+                thumbnail={item.thumbnailUrl}
                 paused={paused}
-                poster={item.thumbnailUrl} // Preload thumbnail
-                posterResizeMode="cover"
-                minLoadRetryCount={5}
-                bufferConfig={{
-                    minBufferMs: 2500,
-                    maxBufferMs: 5000,
-                    bufferForPlaybackMs: 500,
-                    bufferForPlaybackAfterRebufferMs: 1000
-                }}
+                repeat={true}
+                style={styles.video}
             />
 
             <View style={styles.overlay}>

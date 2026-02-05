@@ -2,7 +2,7 @@ import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { LoginManager, AccessToken } from 'react-native-fbsdk-next';
 import { appleAuth } from '@invertase/react-native-apple-authentication';
 import { firebaseAuth } from './firebase';
-import auth from '@react-native-firebase/auth';
+import { GoogleAuthProvider, FacebookAuthProvider, AppleAuthProvider } from '@react-native-firebase/auth';
 
 class AuthService {
     constructor() {
@@ -32,7 +32,7 @@ class AuthService {
                 throw new Error('No ID token found');
             }
 
-            const googleCredential = auth.GoogleAuthProvider.credential(idToken);
+            const googleCredential = GoogleAuthProvider.credential(idToken);
             return await firebaseAuth.signInWithCredential(googleCredential);
         } catch (error: any) {
             console.error('Google Sign-In Error:', error);
@@ -53,7 +53,7 @@ class AuthService {
             if (!data) {
                 throw new Error('Something went wrong obtaining access token');
             }
-            const facebookCredential = auth.FacebookAuthProvider.credential(data.accessToken);
+            const facebookCredential = FacebookAuthProvider.credential(data.accessToken);
             return await firebaseAuth.signInWithCredential(facebookCredential);
         } catch (error) {
             console.error('Facebook Sign-In Error:', error);
@@ -74,7 +74,7 @@ class AuthService {
                 throw new Error('Apple Sign-In failed - no identity token returned');
             }
 
-            const appleCredential = auth.AppleAuthProvider.credential(identityToken, nonce);
+            const appleCredential = AppleAuthProvider.credential(identityToken, nonce);
             return await firebaseAuth.signInWithCredential(appleCredential);
         } catch (error) {
             console.error('Apple Sign-In Error:', error);

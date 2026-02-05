@@ -9,6 +9,7 @@ import paymentService from '../../api/paymentService';
 import rewardService from '../../api/rewardService';
 import userService, { UserProfile } from '../../api/userService';
 import { shareContent } from '../../utils/deepLink';
+import { DiagonalStreaksBackground } from '../../components/common/DiagonalStreaksBackground';
 
 const SquadDetailScreen = ({ navigation, route }: any) => {
     const { squadId } = route.params;
@@ -117,48 +118,23 @@ const SquadDetailScreen = ({ navigation, route }: any) => {
         }
     };
 
-    const handleJoin = () => {
-        if (!userProfile) return;
+    const handleJoin = async () => {
+        if (!userProfile || !squad) return;
+
+        // Check age restriction eligibility
+        const eligibility = await squadService.canJoinSquad(squadId, userProfile.uid);
+        if (!eligibility.canJoin) {
+            Alert.alert('Cannot Join', eligibility.reason || 'You cannot join this squad');
+            return;
+        }
 
         // AGE TIER RESTRICTIONS
         if (userProfile.ageTier === 'junior_baller') {
-            if (squad?.isPremium) {
-                Alert.alert('Restricted', 'Junior Ballers are blocked from joining premium squads for safety.');
-                return;
-            }
             Alert.alert('Restricted', 'Junior Ballers need a parent to help them join squads.');
             return;
         }
 
-        if (userProfile.ageTier === 'academy_prospect' && squad?.isPremium) {
-            Alert.alert('Approval Required', 'Joining premium squads requires parent approval.', [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Ask Parent',
-                    onPress: async () => {
-                        try {
-                            await userService.requestApproval(userProfile.uid, 'squad', {
-                                title: `Join premium squad: ${squad.name}`,
-                                squadId: squad.id,
-                                image: squad.image,
-                                price: squad.price
-                            });
-                            Alert.alert('Request Sent', 'Your parent has been notified.');
-                        } catch (e: any) {
-                            Alert.alert('Error', e.message);
-                        }
-                    }
-                }
-            ]);
-            return;
-        }
-
         // Standard Join Flow
-        if (squad?.isPremium) {
-            setShowPaywall(true);
-            return;
-        }
-
         if (squad?.kudosCost && (userProfile?.coins || 0) < squad.kudosCost) {
             Alert.alert('Insufficient Kudos', `You need ${squad.kudosCost} Kudos to join.`);
             return;
@@ -392,6 +368,7 @@ const SquadDetailScreen = ({ navigation, route }: any) => {
 
     return (
         <SafeAreaView style={styles.container}>
+            <DiagonalStreaksBackground />
             {activeTab === 'feed' && renderFeed()}
             {activeTab === 'members' && renderMembers()}
             {activeTab === 'challenges' && renderChallenges()}
@@ -626,7 +603,7 @@ const styles = StyleSheet.create({
     },
     squadName: {
         fontSize: 28,
-        fontFamily: FONTS.bold,
+        fontFamily: FONTS.display.bold,
         color: COLORS.white,
     },
     premiumBadge: {
@@ -640,7 +617,7 @@ const styles = StyleSheet.create({
     },
     premiumText: {
         fontSize: 10,
-        fontWeight: '900',
+        fontFamily: FONTS.display.bold,
         color: COLORS.background,
     },
     statsRow: {
@@ -656,12 +633,14 @@ const styles = StyleSheet.create({
     statText: {
         color: COLORS.textSecondary,
         fontSize: 14,
+        fontFamily: FONTS.body.regular,
     },
     description: {
         color: COLORS.textSecondary,
         fontSize: 15,
         lineHeight: 22,
         marginBottom: SPACING.lg,
+        fontFamily: FONTS.body.regular,
     },
     tagRow: {
         flexDirection: 'row',
@@ -678,7 +657,7 @@ const styles = StyleSheet.create({
     tagText: {
         color: COLORS.primary,
         fontSize: 12,
-        fontWeight: '600',
+        fontFamily: FONTS.body.semiBold,
     },
     joinBtn: {
         backgroundColor: COLORS.primary,
@@ -691,7 +670,7 @@ const styles = StyleSheet.create({
     joinBtnText: {
         color: COLORS.background,
         fontSize: 18,
-        fontWeight: 'bold',
+        fontFamily: FONTS.display.bold,
     },
     actionRow: {
         flexDirection: 'row',
@@ -709,7 +688,7 @@ const styles = StyleSheet.create({
     },
     actionBtnText: {
         color: COLORS.background,
-        fontWeight: 'bold',
+        fontFamily: FONTS.display.semiBold,
         fontSize: 16,
     },
     secondaryActionBtn: {
@@ -738,7 +717,7 @@ const styles = StyleSheet.create({
     },
     tabText: {
         color: COLORS.textSecondary,
-        fontWeight: '600',
+        fontFamily: FONTS.display.medium,
     },
     activeTabText: {
         color: COLORS.primary,
@@ -766,13 +745,14 @@ const styles = StyleSheet.create({
     },
     postUsername: {
         color: COLORS.white,
-        fontWeight: '700',
+        fontFamily: FONTS.body.bold,
     },
     postCaption: {
         color: COLORS.white,
         fontSize: 14,
         lineHeight: 20,
         marginBottom: 12,
+        fontFamily: FONTS.body.regular,
     },
     postFooter: {
         flexDirection: 'row',
@@ -782,6 +762,7 @@ const styles = StyleSheet.create({
         color: COLORS.textSecondary,
         fontSize: 12,
         marginLeft: 6,
+        fontFamily: FONTS.body.regular,
     },
     emptyState: {
         alignItems: 'center',
@@ -791,6 +772,7 @@ const styles = StyleSheet.create({
     emptyText: {
         color: COLORS.textSecondary,
         marginTop: 16,
+        fontFamily: FONTS.body.regular,
     },
     memberList: {
         padding: SPACING.lg,
@@ -816,19 +798,20 @@ const styles = StyleSheet.create({
     },
     avatarText: {
         color: COLORS.primary,
-        fontWeight: 'bold',
+        fontFamily: FONTS.display.bold,
     },
     memberInfo: {
         flex: 1,
     },
     memberName: {
         color: COLORS.white,
-        fontWeight: '700',
+        fontFamily: FONTS.display.semiBold,
         fontSize: 16,
     },
     memberRole: {
         color: COLORS.textSecondary,
         fontSize: 12,
+        fontFamily: FONTS.body.regular,
     },
     challengeSection: {
         padding: SPACING.lg,
@@ -847,7 +830,7 @@ const styles = StyleSheet.create({
     },
     addChallengeText: {
         color: COLORS.primary,
-        fontWeight: 'bold',
+        fontFamily: FONTS.display.semiBold,
     },
     challengeCard: {
         backgroundColor: COLORS.surface,
@@ -866,16 +849,17 @@ const styles = StyleSheet.create({
     challengeTitle: {
         color: COLORS.white,
         fontSize: 18,
-        fontWeight: 'bold',
+        fontFamily: FONTS.display.bold,
     },
     challengeReward: {
         color: COLORS.primary,
         fontSize: 14,
-        fontWeight: '600',
+        fontFamily: FONTS.body.semiBold,
     },
     challengeDesc: {
         color: COLORS.textSecondary,
         lineHeight: 20,
+        fontFamily: FONTS.body.regular,
     },
     adminModal: {
         flex: 1,
@@ -892,7 +876,7 @@ const styles = StyleSheet.create({
     modalTitle: {
         color: COLORS.white,
         fontSize: 20,
-        fontWeight: 'bold',
+        fontFamily: FONTS.display.bold,
     },
     modalForm: {
         padding: SPACING.lg,
@@ -908,12 +892,12 @@ const styles = StyleSheet.create({
     imageEditBtnText: {
         color: COLORS.primary,
         marginTop: 8,
-        fontWeight: '600',
+        fontFamily: FONTS.body.semiBold,
     },
     label: {
         color: COLORS.white,
         fontSize: 14,
-        fontWeight: '600',
+        fontFamily: FONTS.body.semiBold,
         marginBottom: 8,
         marginTop: 16,
     },
@@ -923,6 +907,7 @@ const styles = StyleSheet.create({
         padding: 12,
         color: COLORS.white,
         fontSize: 16,
+        fontFamily: FONTS.body.regular,
     },
     saveBtn: {
         backgroundColor: COLORS.primary,
@@ -936,7 +921,7 @@ const styles = StyleSheet.create({
     saveBtnText: {
         color: COLORS.background,
         fontSize: 18,
-        fontWeight: 'bold',
+        fontFamily: FONTS.display.bold,
     },
     paywallOverlay: {
         flex: 1,
@@ -959,13 +944,13 @@ const styles = StyleSheet.create({
     paywallTitle: {
         color: COLORS.white,
         fontSize: 24,
-        fontWeight: 'bold',
+        fontFamily: FONTS.display.bold,
         textAlign: 'center',
     },
     paywallPrice: {
         fontSize: 36,
         color: COLORS.primary,
-        fontWeight: '900',
+        fontFamily: FONTS.display.bold,
         marginVertical: 12,
     },
     benefits: {
@@ -976,6 +961,7 @@ const styles = StyleSheet.create({
         color: COLORS.textSecondary,
         fontSize: 16,
         marginBottom: 10,
+        fontFamily: FONTS.body.regular,
     },
     payBtn: {
         width: '100%',
@@ -988,7 +974,7 @@ const styles = StyleSheet.create({
     payBtnText: {
         color: COLORS.background,
         fontSize: 18,
-        fontWeight: 'bold',
+        fontFamily: FONTS.display.bold,
     },
     modalInput: {
         width: '100%',
@@ -997,6 +983,7 @@ const styles = StyleSheet.create({
         padding: 12,
         color: COLORS.white,
         marginBottom: 12,
+        fontFamily: FONTS.body.regular,
     },
     modalActionRow: {
         flexDirection: 'row',
@@ -1015,6 +1002,7 @@ const styles = StyleSheet.create({
     },
     cancelBtnText: {
         color: COLORS.white,
+        fontFamily: FONTS.body.regular,
     },
     confirmBtn: {
         flex: 2,
@@ -1026,7 +1014,7 @@ const styles = StyleSheet.create({
     },
     confirmBtnText: {
         color: COLORS.background,
-        fontWeight: 'bold',
+        fontFamily: FONTS.display.semiBold,
     },
     leaderboardList: {
         padding: SPACING.lg,
@@ -1042,7 +1030,7 @@ const styles = StyleSheet.create({
     rankText: {
         color: COLORS.primary,
         fontSize: 18,
-        fontWeight: 'bold',
+        fontFamily: FONTS.display.bold,
         width: 30,
     },
     leaderboardAvatar: {
@@ -1056,12 +1044,13 @@ const styles = StyleSheet.create({
     },
     leaderboardName: {
         color: COLORS.white,
-        fontWeight: 'bold',
+        fontFamily: FONTS.display.semiBold,
         fontSize: 16,
     },
     leaderboardCoins: {
         color: COLORS.textSecondary,
         fontSize: 13,
+        fontFamily: FONTS.body.regular,
     },
 });
 

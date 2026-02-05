@@ -4,6 +4,7 @@ import { COLORS, SPACING } from '../../constants/theme';
 import { CheckCircle2, Search, ArrowRight, Plus } from 'lucide-react-native';
 import userService from '../../api/userService';
 import { logEvent, EVENTS } from '../../utils/analytics';
+import { DiagonalStreaksBackground } from '../../components/common/DiagonalStreaksBackground';
 
 const INTERESTS = [
     'Skills & Tricks', 'Match Highlights', 'Training Drills', 'Transfer News',
@@ -58,7 +59,7 @@ const InterestsSelectionScreen = ({ navigation, route }: any) => {
         setSelectedPlayers(prev => [...prev, customId]);
         setSearchQuery('');
 
-        Alert.alert("Added!", `${newIdol.name} has been added to your idols!`);
+        Alert.alert("Nice Pick!", `${newIdol.name} is now on your squad!`);
     };
 
     const filteredPlayers = [...PLAYERS, ...customIdols].filter(player =>
@@ -83,8 +84,9 @@ const InterestsSelectionScreen = ({ navigation, route }: any) => {
 
     return (
         <SafeAreaView style={styles.container}>
+            <DiagonalStreaksBackground />
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>Personalize</Text>
+                <Text style={styles.headerTitle}>Personalise</Text>
                 <Text style={styles.headerSubtitle}>Choose what you want to see</Text>
             </View>
 
@@ -107,7 +109,7 @@ const InterestsSelectionScreen = ({ navigation, route }: any) => {
                     })}
                 </View>
 
-                <Text style={styles.sectionTitle}>Follow Your Idols</Text>
+                <Text style={styles.sectionTitle}>Choose your mentors</Text>
 
                 {/* Search Input */}
                 <View style={styles.searchContainer}>

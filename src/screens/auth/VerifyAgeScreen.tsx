@@ -4,8 +4,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, SPACING } from '../../constants/theme';
 import { ChevronLeft, Camera, ShieldCheck, CheckCircle2 } from 'lucide-react-native';
 import { db } from '../../api/firebase';
+import { collection, addDoc, serverTimestamp } from '@react-native-firebase/firestore';
 import userService from '../../api/userService';
 import { logEvent, EVENTS } from '../../utils/analytics';
+import { DiagonalStreaksBackground } from '../../components/common/DiagonalStreaksBackground';
 
 import { launchCamera } from 'react-native-image-picker';
 
@@ -108,30 +110,30 @@ const VerifyAgeScreen = ({ navigation, route }: any) => {
                     // Upload photo to Firebase Storage for manual review
                     const photoUrl = await userService.uploadVerificationPhoto(uid, result.assets[0].uri);
 
-                    // Create verification request in Firestore
-                    await db.collection('verificationRequests').add({
+                    // Create verification request in Firestore using MODULAR API
+                    await addDoc(collection(db, 'verificationRequests'), {
                         userId: uid,
                         photoUrl: photoUrl,
                         userAge: userAge,
                         accountType: accountType,
                         status: 'pending',
-                        createdAt: new Date(),
+                        createdAt: serverTimestamp(),
                         reviewedAt: null,
                         reviewedBy: null
                     });
 
                     // Update user profile to show verification is pending
                     await userService.updateUserProfile(uid, {
-                        verificationStatus: 'pending',
-                        verificationPhotoUrl: photoUrl
+                        parentPictureVerified: false,
+                        verification_photo: photoUrl,
+                        verificationStatus: 'pending'
                     });
 
                     setVerifying(false);
 
-                    // Show success message but NOT verified yet
                     Alert.alert(
-                        "Verification Submitted",
-                        "Your photo has been submitted for review. Our team will verify your age within 24-48 hours. You'll receive a notification once approved.",
+                        "You're In!",
+                        "Photo submitted! Our team will verify you within 24-48 hours. We'll hit you up when you're all set!",
                         [
                             {
                                 text: "Continue",
@@ -146,8 +148,8 @@ const VerifyAgeScreen = ({ navigation, route }: any) => {
                     console.error("Upload Error:", uploadError);
                     setVerifying(false);
                     Alert.alert(
-                        "Upload Failed",
-                        "Could not submit verification photo. Please check your internet connection and try again."
+                        "Connection Issue",
+                        "Couldn't upload your photo. Check your internet and give it another go!"
                     );
                 }
             }
@@ -159,7 +161,6 @@ const VerifyAgeScreen = ({ navigation, route }: any) => {
 
     const handleContinue = () => {
         if (ageError) {
-            // If they are under 18, they just skip verification but can still use the app (with restrictions)
             navigation.navigate('InterestsSelection');
             return;
         }
@@ -173,6 +174,7 @@ const VerifyAgeScreen = ({ navigation, route }: any) => {
 
     return (
         <SafeAreaView style={styles.container}>
+            <DiagonalStreaksBackground />
             <View style={[styles.header, { paddingTop: Platform.OS === 'android' ? insets.top + 10 : 10 }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
                     <ChevronLeft color={COLORS.white} size={28} />
@@ -285,141 +287,30 @@ const VerifyAgeScreen = ({ navigation, route }: any) => {
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: COLORS.background,
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: SPACING.md,
-        paddingBottom: SPACING.sm,
-        backgroundColor: COLORS.background,
-        zIndex: 100,
-    },
-    backBtn: {
-        padding: 5,
-    },
-    headerTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: COLORS.white,
-        marginLeft: SPACING.sm,
-    },
-    scrollView: {
-        flex: 1,
-    },
-    scrollContent: {
-        paddingBottom: 40,
-    },
-    content: {
-        flex: 1,
-        padding: SPACING.lg,
-    },
-    scanContainer: {
-        alignItems: 'center',
-        marginTop: 40,
-    },
-    faceFrame: {
-        width: 180,
-        height: 240,
-        borderRadius: 90,
-        borderWidth: 2,
-        borderColor: 'rgba(255,255,255,0.2)',
-        borderStyle: 'dashed',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: SPACING.xl,
-        overflow: 'hidden',
-    },
-    faceFrameImage: {
-        width: '100%',
-        height: '100%',
-        borderRadius: 90,
-    },
-    successContainer: {
-        alignItems: 'center',
-        marginTop: 40,
-    },
-    successIconBox: {
-        width: 120,
-        height: 120,
-        backgroundColor: 'rgba(143, 251, 185, 0.1)',
-        borderRadius: 60,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: SPACING.xl,
-    },
-    instructionTitle: {
-        fontSize: 22,
-        fontWeight: '800',
-        color: COLORS.white,
-        textAlign: 'center',
-    },
-    instructionDesc: {
-        fontSize: 14,
-        color: COLORS.textSecondary,
-        textAlign: 'center',
-        marginTop: 12,
-        lineHeight: 20,
-    },
-    stepsContainer: {
-        gap: SPACING.sm,
-    },
-    stepItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: SPACING.md,
-        backgroundColor: COLORS.surface,
-        padding: SPACING.md,
-        borderRadius: 12,
-    },
-    stepDot: {
-        width: 20,
-        height: 20,
-        borderRadius: 10,
-        borderWidth: 1.5,
-        borderColor: 'rgba(255,255,255,0.2)',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    stepLabel: {
-        fontSize: 14,
-        color: COLORS.textSecondary,
-        fontWeight: '600',
-    },
-    stepLabelActive: {
-        fontSize: 14,
-        color: COLORS.white,
-        fontWeight: '700',
-    },
-    footer: {
-        marginTop: SPACING.xl,
-    },
-    primaryBtn: {
-        height: 56,
-        backgroundColor: COLORS.primary,
-        borderRadius: 28,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginTop: SPACING.lg,
-    },
-    primaryBtnText: {
-        color: COLORS.background,
-        fontSize: 18,
-        fontWeight: 'bold',
-    },
-    brandContainer: {
-        alignItems: 'center',
-        marginVertical: 10,
-    },
-    brandIcon: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        borderWidth: 2,
-        borderColor: 'rgba(143, 251, 185, 0.3)',
-    }
+    container: { flex: 1, backgroundColor: COLORS.background },
+    header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.md, paddingBottom: SPACING.sm, zIndex: 100 },
+    backBtn: { padding: 5 },
+    headerTitle: { fontSize: 18, fontWeight: '700', color: COLORS.white, marginLeft: SPACING.sm },
+    scrollView: { flex: 1 },
+    scrollContent: { paddingBottom: 40 },
+    content: { flex: 1, padding: SPACING.lg },
+    scanContainer: { alignItems: 'center', marginTop: 40 },
+    faceFrame: { width: 180, height: 240, borderRadius: 90, borderWidth: 2, borderColor: 'rgba(255,255,255,0.2)', borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', marginBottom: SPACING.xl, overflow: 'hidden' },
+    faceFrameImage: { width: '100%', height: '100%', borderRadius: 90 },
+    successContainer: { alignItems: 'center', marginTop: 40 },
+    successIconBox: { width: 120, height: 120, backgroundColor: 'rgba(143, 251, 185, 0.1)', borderRadius: 60, alignItems: 'center', justifyContent: 'center', marginBottom: SPACING.xl },
+    instructionTitle: { fontSize: 22, fontWeight: '800', color: COLORS.white, textAlign: 'center' },
+    instructionDesc: { fontSize: 14, color: COLORS.textSecondary, textAlign: 'center', marginTop: 12, lineHeight: 20 },
+    stepsContainer: { gap: SPACING.sm },
+    stepItem: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md, backgroundColor: COLORS.surface, padding: SPACING.md, borderRadius: 12 },
+    stepDot: { width: 20, height: 20, borderRadius: 10, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
+    stepLabel: { fontSize: 14, color: COLORS.textSecondary, fontWeight: '600' },
+    stepLabelActive: { fontSize: 14, color: COLORS.white, fontWeight: '700' },
+    footer: { marginTop: SPACING.xl },
+    primaryBtn: { height: 56, backgroundColor: COLORS.primary, borderRadius: 28, alignItems: 'center', justifyContent: 'center', marginTop: SPACING.lg },
+    primaryBtnText: { color: COLORS.background, fontSize: 18, fontWeight: 'bold' },
+    brandContainer: { alignItems: 'center', marginVertical: 10 },
+    brandIcon: { width: 80, height: 80, borderRadius: 40, borderWidth: 2, borderColor: 'rgba(143, 251, 185, 0.3)' }
 });
 
 export default VerifyAgeScreen;

@@ -1,36 +1,27 @@
-import auth from '@react-native-firebase/auth';
-import firestore, { getFirestore } from '@react-native-firebase/firestore';
-import storage from '@react-native-firebase/storage';
-import functions from '@react-native-firebase/functions';
-import analytics from '@react-native-firebase/analytics';
-// import appCheck from '@react-native-firebase/app-check';
+import { getApp, getApps, initializeApp } from '@react-native-firebase/app';
+import { getAuth } from '@react-native-firebase/auth';
+import { getFirestore } from '@react-native-firebase/firestore';
+import { getStorage } from '@react-native-firebase/storage';
+import { getFunctions } from '@react-native-firebase/functions';
+import { getAnalytics } from '@react-native-firebase/analytics';
 
-// Note: Ensure you have your google-services.json (Android) 
-// and GoogleService-Info.plist (iOS) in the respective native folders.
-
-export const db = firestore();
-export const modularDb = getFirestore();
-export const firebaseAuth = auth();
-export const firebaseStorage = storage();
-export let cloudFunctions: any;
-try {
-    cloudFunctions = functions();
-} catch (e) {
-    console.warn('Firebase Functions not initialized:', e);
+// Initialize the default app if not already initialized
+let app;
+if (getApps().length === 0) {
+    app = initializeApp();
+} else {
+    app = getApp();
 }
-export const firebaseAnalytics = analytics();
+
+// Export modular instances (Linking them to the app instance)
+export const db = getFirestore(app);
+export const modularDb = db;
+export const firebaseAuth = getAuth(app);
+export const firebaseStorage = getStorage(app);
+export const cloudFunctions = getFunctions(app, 'us-central1');
+export const firebaseAnalytics = getAnalytics(app);
 
 export const initAppCheck = async () => {
-    // const provider = appCheck().newReactNativeFirebaseAppCheckProvider();
-    // provider.configure({
-    //     android: {
-    //         provider: 'debug', // Change to 'playIntegrity' for production
-    //     },
-    //     apple: {
-    //         provider: 'debug', // Change to 'deviceCheck' or 'appAttest' for production
-    //     },
-    // });
-    // await appCheck().activate(provider, true);
     console.log('App Check disabled for debugging');
 };
 

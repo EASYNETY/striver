@@ -1,21 +1,21 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TextInput, TouchableOpacity, ScrollView, Switch, Image, Alert } from 'react-native';
-import { COLORS, SPACING } from '../../constants/theme';
+import { COLORS, SPACING, FONTS } from '../../constants/theme';
 import { ChevronLeft, Camera, Upload, ShieldAlert, Award } from 'lucide-react-native';
 import squadService from '../../api/squadService';
 import userService, { UserProfile } from '../../api/userService';
 import { firebaseAuth } from '../../api/firebase';
 import { CAREER_TIERS } from '../../constants/rewards';
 import { launchImageLibrary } from 'react-native-image-picker';
+import { DiagonalStreaksBackground } from '../../components/common/DiagonalStreaksBackground';
 
 const CreateSquadScreen = ({ navigation }: any) => {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
-    const [isPremium, setIsPremium] = useState(false);
-    const [price, setPrice] = useState('');
     const [isPrivate, setIsPrivate] = useState(false);
     const [capacity, setCapacity] = useState('50');
     const [kudosCost, setKudosCost] = useState('');
+    const [ageRestriction, setAgeRestriction] = useState<'all' | '13+' | '18+'>('all');
     const [imageUri, setImageUri] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -47,14 +47,8 @@ const CreateSquadScreen = ({ navigation }: any) => {
             return;
         }
 
-        // 3. Premium Check: Minimum 'Pro' to create a Premium Squad
+        // 3. Squad Limit Check: Only 'Pro' and above get unlimited squads
         const proIndex = CAREER_TIERS.findIndex(t => t.id === 'pro');
-        if (isPremium && currentTierIndex < proIndex) {
-            Alert.alert('Pro Required', `You need 'Pro' status to create Premium squads. Currently at: ${CAREER_TIERS[currentTierIndex].name}`);
-            return;
-        }
-
-        // 4. Squad Limit Check: Only 'Pro' and above get unlimited squads
         if (currentTierIndex < proIndex && userOwnedSquadsCount >= 1) {
             Alert.alert(
                 'Squad Limit Reached',
@@ -69,22 +63,16 @@ const CreateSquadScreen = ({ navigation }: any) => {
             return;
         }
 
-        if (isPremium && !price.trim()) {
-            Alert.alert('Missing Info', 'Please set a monthly subscription price.');
-            return;
-        }
-
         setLoading(true);
         try {
             await squadService.createSquad({
                 name,
                 description,
                 imageUri: imageUri || undefined,
-                isPremium,
-                price: isPremium ? price : undefined,
                 isPrivate,
                 capacity: parseInt(capacity) || 50,
                 kudosCost: parseInt(kudosCost) || 0,
+                ageRestriction,
             });
             Alert.alert('Success', 'Squad created successfully!', [
                 { text: 'OK', onPress: () => navigation.goBack() }
@@ -110,6 +98,7 @@ const CreateSquadScreen = ({ navigation }: any) => {
 
     return (
         <SafeAreaView style={styles.container}>
+            <DiagonalStreaksBackground />
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
                     <ChevronLeft color={COLORS.white} size={28} />
@@ -127,7 +116,7 @@ const CreateSquadScreen = ({ navigation }: any) => {
                         <Text style={styles.requirementsDesc}>
                             • Reached 'Academy' Tier (100 Coins){"\n"}
                             • Age 13+ (Junior Ballers restricted){"\n"}
-                            • 'Pro' status for Premium Squads
+                            • 'Pro' status for unlimited squads
                         </Text>
                     </View>
                 </View>
@@ -172,38 +161,46 @@ const CreateSquadScreen = ({ navigation }: any) => {
                     />
                 </View>
 
-                {/* Premium Toggle */}
-                <View style={styles.premiumContainer}>
-                    <View style={styles.premiumHeader}>
-                        <Text style={styles.premiumTitle}>Premium Squad</Text>
-                        <Switch
-                            value={isPremium}
-                            onValueChange={setIsPremium}
-                            trackColor={{ false: COLORS.surface, true: COLORS.primary }}
-                            thumbColor={COLORS.white}
-                        />
-                    </View>
-                    <Text style={styles.premiumDesc}>
-                        Premium squads can solve exclusive challenges and earn more rewards. Charge a monthly fee for entry.
+                {/* Additional Settings */}
+                <View style={styles.formSection}>
+                    <Text style={styles.label}>Age Restriction</Text>
+                    <Text style={styles.settingDesc} style={{ marginBottom: 12, marginLeft: 4 }}>
+                        Control who can join based on age for safety and compliance
                     </Text>
 
-                    {isPremium && (
-                        <View style={styles.priceInputContainer}>
-                            <Text style={styles.currencySymbol}>£</Text>
-                            <TextInput
-                                style={styles.priceInput}
-                                placeholder="4.99"
-                                placeholderTextColor={COLORS.textSecondary}
-                                keyboardType="numeric"
-                                value={price}
-                                onChangeText={setPrice}
-                            />
-                            <Text style={styles.perMonth}>/ month</Text>
-                        </View>
-                    )}
+                    <View style={styles.ageRestrictionContainer}>
+                        <TouchableOpacity
+                            style={[styles.ageRestrictionBtn, ageRestriction === 'all' && styles.ageRestrictionBtnActive]}
+                            onPress={() => setAgeRestriction('all')}
+                        >
+                            <Text style={[styles.ageRestrictionText, ageRestriction === 'all' && styles.ageRestrictionTextActive]}>
+                                All Ages
+                            </Text>
+                            <Text style={styles.ageRestrictionSubtext}>Open to everyone</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.ageRestrictionBtn, ageRestriction === '13+' && styles.ageRestrictionBtnActive]}
+                            onPress={() => setAgeRestriction('13+')}
+                        >
+                            <Text style={[styles.ageRestrictionText, ageRestriction === '13+' && styles.ageRestrictionTextActive]}>
+                                13+
+                            </Text>
+                            <Text style={styles.ageRestrictionSubtext}>Academy Prospect & up</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.ageRestrictionBtn, ageRestriction === '18+' && styles.ageRestrictionBtnActive]}
+                            onPress={() => setAgeRestriction('18+')}
+                        >
+                            <Text style={[styles.ageRestrictionText, ageRestriction === '18+' && styles.ageRestrictionTextActive]}>
+                                18+
+                            </Text>
+                            <Text style={styles.ageRestrictionSubtext}>First Teamer only</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
-                {/* Additional Settings */}
                 <View style={styles.formSection}>
                     <Text style={styles.label}>Privacy & Access</Text>
 
@@ -284,7 +281,7 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         fontSize: 18,
-        fontWeight: '700',
+        fontFamily: FONTS.display.semiBold,
         color: COLORS.white,
     },
     content: {
@@ -301,7 +298,7 @@ const styles = StyleSheet.create({
     },
     requirementsTitle: {
         color: COLORS.primary,
-        fontWeight: 'bold',
+        fontFamily: FONTS.body.bold,
         fontSize: 14,
         marginBottom: 4,
     },
@@ -309,6 +306,7 @@ const styles = StyleSheet.create({
         color: 'rgba(255,255,255,0.6)',
         fontSize: 12,
         lineHeight: 18,
+        fontFamily: FONTS.body.regular,
     },
     imageUpload: {
         height: 150,
@@ -335,7 +333,7 @@ const styles = StyleSheet.create({
     uploadText: {
         color: COLORS.textSecondary,
         marginTop: 8,
-        fontWeight: '600',
+        fontFamily: FONTS.body.semiBold,
     },
     editBadge: {
         position: 'absolute',
@@ -350,7 +348,7 @@ const styles = StyleSheet.create({
     },
     label: {
         color: COLORS.white,
-        fontWeight: '700',
+        fontFamily: FONTS.body.bold,
         marginBottom: 8,
         marginLeft: 4,
     },
@@ -363,57 +361,42 @@ const styles = StyleSheet.create({
         fontSize: 16,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.05)',
+        fontFamily: FONTS.body.regular,
     },
     textArea: {
         height: 100,
     },
-    premiumContainer: {
-        backgroundColor: 'rgba(255,255,255,0.05)',
-        borderRadius: 16,
-        padding: SPACING.md,
-        marginBottom: SPACING.xl,
-    },
-    premiumHeader: {
+    ageRestrictionContainer: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 8,
+        gap: SPACING.sm,
     },
-    premiumTitle: {
-        fontSize: 16,
-        fontWeight: '700',
-        color: COLORS.white,
-    },
-    premiumDesc: {
-        fontSize: 13,
-        color: COLORS.textSecondary,
-        lineHeight: 18,
-        marginBottom: 12,
-    },
-    priceInputContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: COLORS.background,
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-    },
-    currencySymbol: {
-        color: COLORS.white,
-        fontSize: 16,
-        fontWeight: '700',
-        marginRight: 4,
-    },
-    priceInput: {
+    ageRestrictionBtn: {
         flex: 1,
-        color: COLORS.white,
-        fontSize: 16,
-        fontWeight: '700',
-        padding: 0,
+        backgroundColor: COLORS.surface,
+        borderRadius: 12,
+        padding: SPACING.md,
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: 'rgba(255,255,255,0.1)',
     },
-    perMonth: {
+    ageRestrictionBtnActive: {
+        borderColor: COLORS.primary,
+        backgroundColor: 'rgba(143, 251, 185, 0.1)',
+    },
+    ageRestrictionText: {
+        fontSize: 16,
+        fontFamily: FONTS.display.bold,
         color: COLORS.textSecondary,
-        fontSize: 14,
+        marginBottom: 4,
+    },
+    ageRestrictionTextActive: {
+        color: COLORS.primary,
+    },
+    ageRestrictionSubtext: {
+        fontSize: 11,
+        fontFamily: FONTS.body.regular,
+        color: COLORS.textSecondary,
+        textAlign: 'center',
     },
     createBtn: {
         backgroundColor: COLORS.primary,
@@ -429,7 +412,7 @@ const styles = StyleSheet.create({
     createBtnText: {
         color: COLORS.background,
         fontSize: 18,
-        fontWeight: '700',
+        fontFamily: FONTS.display.bold,
     },
     settingRow: {
         flexDirection: 'row',
@@ -444,13 +427,14 @@ const styles = StyleSheet.create({
     },
     settingTitle: {
         fontSize: 15,
-        fontWeight: '600',
+        fontFamily: FONTS.body.semiBold,
         color: COLORS.white,
         marginBottom: 4,
     },
     settingDesc: {
         fontSize: 12,
         color: COLORS.textSecondary,
+        fontFamily: FONTS.body.regular,
     },
     smallInput: {
         backgroundColor: COLORS.background,
@@ -463,6 +447,7 @@ const styles = StyleSheet.create({
         textAlign: 'right',
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.1)',
+        fontFamily: FONTS.body.regular,
     },
 });
 

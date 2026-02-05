@@ -5,11 +5,13 @@ import { ChevronLeft, Camera, Check } from 'lucide-react-native';
 import userService, { UserProfile } from '../../api/userService';
 import { firebaseAuth } from '../../api/firebase';
 import { launchImageLibrary } from 'react-native-image-picker';
+import { DiagonalStreaksBackground } from '../../components/common/DiagonalStreaksBackground';
 
 const EditProfileScreen = ({ navigation }: any) => {
     const [displayName, setDisplayName] = useState('');
     const [username, setUsername] = useState('');
     const [bio, setBio] = useState('');
+    const [favoriteTeam, setFavoriteTeam] = useState('');
     const [avatar, setAvatar] = useState('');
     const [loading, setLoading] = useState(false);
     const [initialLoading, setInitialLoading] = useState(true);
@@ -25,6 +27,7 @@ const EditProfileScreen = ({ navigation }: any) => {
             setDisplayName(profile.displayName || '');
             setUsername(profile.username || '');
             setBio(profile.bio || '');
+            setFavoriteTeam(profile.favoriteTeam || '');
             setAvatar(profile.avatar || '');
         }
         setInitialLoading(false);
@@ -68,6 +71,7 @@ const EditProfileScreen = ({ navigation }: any) => {
                     displayName,
                     username,
                     bio,
+                    favoriteTeam,
                 });
                 navigation.goBack();
             }
@@ -80,6 +84,7 @@ const EditProfileScreen = ({ navigation }: any) => {
 
     return (
         <SafeAreaView style={styles.container}>
+            <DiagonalStreaksBackground />
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
                     <ChevronLeft color={COLORS.white} size={28} />
@@ -146,6 +151,17 @@ const EditProfileScreen = ({ navigation }: any) => {
                             maxLength={150}
                         />
                         <Text style={styles.charCount}>{bio.length}/150</Text>
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Favorite Team</Text>
+                        <TextInput
+                            style={styles.input}
+                            value={favoriteTeam}
+                            onChangeText={setFavoriteTeam}
+                            placeholder="e.g. Manchester United, Barcelona..."
+                            placeholderTextColor={COLORS.textSecondary}
+                        />
                     </View>
                 </View>
             </ScrollView>

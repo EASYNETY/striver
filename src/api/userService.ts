@@ -1,5 +1,22 @@
-import { db, firebaseAuth, firebaseStorage } from '../api/firebase';
-import firestore from '@react-native-firebase/firestore';
+import { db, modularDb, firebaseAuth, firebaseStorage } from '../api/firebase';
+import {
+    collection,
+    doc,
+    getDoc,
+    getDocs,
+    setDoc,
+    updateDoc,
+    deleteDoc,
+    addDoc,
+    onSnapshot,
+    query,
+    where,
+    limit,
+    Timestamp,
+    increment,
+    serverTimestamp,
+    FieldValue
+} from '@react-native-firebase/firestore';
 
 export type AccountType = 'family' | 'individual';
 export type AgeTier = 'junior_baller' | 'academy_prospect' | 'first_teamer';
@@ -13,6 +30,7 @@ export interface UserProfile {
     phoneNumber?: string;
     bio?: string;
     avatar?: string;
+    favoriteTeam?: string;
 
     // Striver Specifics
     accountType: AccountType;
@@ -32,6 +50,20 @@ export interface UserProfile {
     // Family Specifics
     activeProfileId?: string; // Currently switched to this child profile (if family)
     parentUid?: string;
+
+    // Verification
+    verification_photo?: string;
+    parentPictureVerified?: boolean;
+    verificationStatus?: 'pending' | 'verified' | 'rejected';
+    ageVerificationStatus?: 'unverified' | 'verified' | 'rejected';
+    ageVerificationDate?: any;
+    profileStatus?: {
+        ageVerification?: string;
+        verificationStartedAt?: any;
+        verificationCompletedAt?: any;
+        verificationMethod?: string;
+    };
+    profileCompletion?: number;
 
     createdAt: any;
     updatedAt: any;
@@ -61,7 +93,7 @@ export interface ChildProfile {
 }
 
 class UserService {
-    private usersCollection = db.collection('users');
+    private usersCollection = collection(modularDb, 'users');
 
     // Get current user profile
     async getCurrentUserProfile(): Promise<UserProfile | null> {
@@ -69,7 +101,8 @@ class UserService {
         if (!currentUser) return null;
 
         try {
-            const userDocSnap = await db.collection('users').doc(currentUser.uid).get();
+            const userDocRef = doc(modularDb, 'users', currentUser.uid);
+            const userDocSnap = await getDoc(userDocRef);
 
             if (!userDocSnap.exists) {
                 // Auto-create profile if missing
@@ -89,11 +122,11 @@ class UserService {
                     following: 0,
                     replies: 0,
                     onboardingComplete: false,
-                    createdAt: firestore.FieldValue.serverTimestamp(),
-                    updatedAt: firestore.FieldValue.serverTimestamp(),
+                    createdAt: serverTimestamp(),
+                    updatedAt: serverTimestamp(),
                 };
 
-                await db.collection('users').doc(currentUser.uid).set(defaultProfile);
+                await setDoc(userDocRef, defaultProfile);
                 return { uid: currentUser.uid, ...defaultProfile } as unknown as UserProfile;
             }
 
@@ -118,10 +151,11 @@ class UserService {
     async getUserProfile(uid: string): Promise<UserProfile | null> {
         if (!uid) return null;
         try {
-            const userDoc = await db.collection('users').doc(uid).get();
-            if (!userDoc.exists) return null;
+            const userDocRef = doc(modularDb, 'users', uid);
+            const userDocSnap = await getDoc(userDocRef);
+            if (!userDocSnap.exists) return null;
 
-            return { uid: userDoc.id, ...userDoc.data() } as UserProfile;
+            return { uid: userDocSnap.id, ...userDocSnap.data() } as UserProfile;
         } catch (error) {
             console.error("Error getting user profile:", error, "for uid:", uid);
             return null;
@@ -134,7 +168,7 @@ class UserService {
             callback(null);
             return () => { };
         }
-        return db.collection('users').doc(uid).onSnapshot(
+        return onSnapshot(doc(modularDb, 'users', uid),
             (snapshot) => {
                 if (snapshot.exists) {
                     callback({ uid: snapshot.id, ...snapshot.data() } as UserProfile);
@@ -154,7 +188,7 @@ class UserService {
 
     // Create user profile (called after signup)
     async createUserProfile(uid: string, data: Partial<UserProfile>): Promise<void> {
-        await this.usersCollection.doc(uid).set({
+        await setDoc(doc(this.usersCollection, uid), {
             username: data.username || `user_${uid.substring(0, 8)}`,
             email: data.email || '',
             displayName: data.displayName || '',
@@ -171,8 +205,8 @@ class UserService {
             following: 0,
             replies: 0,
             onboardingComplete: false,
-            createdAt: firestore.FieldValue.serverTimestamp(),
-            updatedAt: firestore.FieldValue.serverTimestamp(),
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
         });
     }
 
@@ -186,23 +220,23 @@ class UserService {
             return acc;
         }, {} as any);
 
-        await this.usersCollection.doc(uid).update({
+        await updateDoc(doc(this.usersCollection, uid), {
             ...cleanData,
-            updatedAt: firestore.FieldValue.serverTimestamp(),
+            updatedAt: serverTimestamp(),
         });
     }
 
     // Add coins to user
     async addCoins(uid: string, amount: number): Promise<void> {
-        await this.usersCollection.doc(uid).update({
-            coins: firestore.FieldValue.increment(amount),
+        await updateDoc(doc(this.usersCollection, uid), {
+            coins: increment(amount),
         });
     }
 
     // Deduct coins from user
     async deductCoins(uid: string, amount: number): Promise<void> {
-        await this.usersCollection.doc(uid).update({
-            coins: firestore.FieldValue.increment(-amount),
+        await updateDoc(doc(this.usersCollection, uid), {
+            coins: increment(-amount),
         });
     }
 
@@ -218,6 +252,7 @@ class UserService {
     // Upload verification photo for age verification
     async uploadVerificationPhoto(uid: string, fileUri: string): Promise<string> {
         const timestamp = Date.now();
+        // Ensure path is safe for both iOS and Android if needed, but RNFB usually handles it.
         const reference = firebaseStorage.ref(`verification_photos/${uid}_${timestamp}.jpg`);
         await reference.putFile(fileUri);
         const url = await reference.getDownloadURL();
@@ -232,46 +267,96 @@ class UserService {
 
     // Get children for a family account
     async getChildren(parentUid: string): Promise<ChildProfile[]> {
-        const snapshot = await this.usersCollection.doc(parentUid).collection('children').get();
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChildProfile));
+        const snapshot = await getDocs(collection(doc(this.usersCollection, parentUid), 'children'));
+        return snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as ChildProfile));
     }
 
     // Real-time children listener
     getChildrenListener(parentUid: string, callback: (children: ChildProfile[]) => void) {
-        return this.usersCollection.doc(parentUid).collection('children').onSnapshot(snapshot => {
-            const children = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChildProfile));
+        return onSnapshot(collection(doc(this.usersCollection, parentUid), 'children'), snapshot => {
+            if (!snapshot) {
+                console.warn('Children snapshot is null');
+                callback([]);
+                return;
+            }
+            const children = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as ChildProfile));
             callback(children);
+        }, error => {
+            console.error('Children listener error:', error);
+            callback([]);
         });
     }
 
     // Real-time approvals listener
     getApprovalsListener(parentUid: string, callback: (approvals: any[]) => void) {
-        return this.usersCollection.doc(parentUid).collection('approvals').where('status', '==', 'pending').onSnapshot(snapshot => {
-            const approvals = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const approvalsQuery = query(
+            collection(doc(this.usersCollection, parentUid), 'approvals'),
+            where('status', '==', 'pending')
+        );
+        return onSnapshot(approvalsQuery, snapshot => {
+            if (!snapshot) {
+                console.warn('Approvals snapshot is null');
+                callback([]);
+                return;
+            }
+            const approvals = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
             callback(approvals);
+        }, error => {
+            console.error('Approvals listener error:', error);
+            callback([]);
         });
     }
 
     // Action an approval request
     async actionApproval(parentUid: string, approvalId: string, status: 'approved' | 'rejected') {
-        const docRef = this.usersCollection.doc(parentUid).collection('approvals').doc(approvalId);
-        await docRef.update({
+        const approvalDocRef = doc(collection(doc(this.usersCollection, parentUid), 'approvals'), approvalId);
+        await updateDoc(approvalDocRef, {
             status,
-            updatedAt: firestore.FieldValue.serverTimestamp()
+            updatedAt: serverTimestamp()
         });
-
-        const doc = await docRef.get();
-        const data = doc.data();
-        if (data?.type === 'video' && data?.metadata?.postId) {
-            await db.collection('posts').doc(data.metadata.postId).update({
-                status: status === 'approved' ? 'active' : 'rejected'
-            });
+        const approvalDocSnap = await getDoc(approvalDocRef);
+        if (approvalDocSnap.exists) {
+            const data = approvalDocSnap.data();
+            if (data?.type === 'video' && data?.metadata?.postId) {
+                await updateDoc(doc(modularDb, 'posts', data.metadata.postId), {
+                    status: status === 'approved' ? 'active' : 'rejected'
+                });
+            }
         }
     }
 
     // Add child with safety defaults
     async addChildProfile(parentUid: string, data: Partial<ChildProfile>): Promise<string> {
-        const childRef = await this.usersCollection.doc(parentUid).collection('children').add({
+        // Validate parent can add children
+        const parentProfile = await this.getUserProfile(parentUid);
+        if (!parentProfile) {
+            throw new Error('Parent profile not found');
+        }
+
+        if (parentProfile.accountType !== 'family') {
+            throw new Error('Only family accounts can add child profiles');
+        }
+
+        // Check if parent is verified (18+)
+        if (parentProfile.ageVerificationStatus !== 'verified') {
+            throw new Error('Parent must complete age verification before adding children');
+        }
+
+        // Check child limit (max 5)
+        const existingChildren = await this.getChildren(parentUid);
+        if (existingChildren.length >= 5) {
+            throw new Error('Maximum of 5 child profiles allowed');
+        }
+
+        // Validate child age (must be under 13)
+        if (data.dob) {
+            const age = this.calculateAge(data.dob);
+            if (age >= 13) {
+                throw new Error('Child profiles are only for children under 13. Users 13+ should create their own account.');
+            }
+        }
+
+        const childRef = await addDoc(collection(doc(this.usersCollection, parentUid), 'children'), {
             firstName: data.firstName || '',
             displayName: data.displayName || '',
             dob: data.dob || '',
@@ -294,6 +379,23 @@ class UserService {
         return childRef.id;
     }
 
+    // Helper to calculate age
+    private calculateAge(dob: string): number {
+        const parts = dob.split('/');
+        if (parts.length !== 3) return -1;
+
+        const birth = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+        const today = new Date();
+        let age = today.getFullYear() - birth.getFullYear();
+        const m = today.getMonth() - birth.getMonth();
+
+        if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+            age--;
+        }
+
+        return age;
+    }
+
     // Request Approval for a purchase or action
     async requestApproval(userId: string, type: 'video' | 'purchase' | 'squad', metadata: any) {
         const user = await this.getUserProfile(userId);
@@ -301,7 +403,7 @@ class UserService {
             throw new Error('No parent account linked for approval.');
         }
 
-        return this.usersCollection.doc(user.parentUid).collection('approvals').add({
+        return addDoc(collection(doc(this.usersCollection, user.parentUid), 'approvals'), {
             userId,
             childName: user.displayName || user.username,
             type,
@@ -312,7 +414,25 @@ class UserService {
                 ...metadata,
                 timestamp: new Date().toISOString()
             },
-            createdAt: firestore.FieldValue.serverTimestamp()
+            createdAt: serverTimestamp()
+        });
+    }
+
+    // Create mock approval request (for testing)
+    async createMockApprovalRequest(parentUid: string, childName: string) {
+        return addDoc(collection(doc(this.usersCollection, parentUid), 'approvals'), {
+            userId: 'mock_child_id',
+            childName: childName,
+            type: 'video',
+            title: 'New video upload: "My Soccer Skills"',
+            thumbnail: 'https://via.placeholder.com/150',
+            status: 'pending',
+            metadata: {
+                videoId: 'mock_video_123',
+                duration: 45,
+                timestamp: new Date().toISOString()
+            },
+            createdAt: serverTimestamp()
         });
     }
 
@@ -325,64 +445,67 @@ class UserService {
     async followUser(followerId: string, followingId: string): Promise<void> {
         if (followerId === followingId) return;
 
-        const followRef = db.collection('following').doc(`${followerId}_${followingId}`);
-        const snapshot = await followRef.get();
+        const followRef = doc(modularDb, 'following', `${followerId}_${followingId}`);
+        const snapshot = await getDoc(followRef);
         if (snapshot.exists) return; // Already following
 
-        await followRef.set({
+        await setDoc(followRef, {
             followerId,
             followingId,
-            createdAt: firestore.FieldValue.serverTimestamp()
+            createdAt: serverTimestamp()
         });
 
         // Update counts
-        const followerRef = db.collection('users').doc(followerId);
-        const followingRef = db.collection('users').doc(followingId);
+        const followerDocRef = doc(modularDb, 'users', followerId);
+        const followingDocRef = doc(modularDb, 'users', followingId);
 
-        await followerRef.update({
-            following: firestore.FieldValue.increment(1)
+        await updateDoc(followerDocRef, {
+            following: increment(1)
         });
-        await followingRef.update({
-            followers: firestore.FieldValue.increment(1)
+        await updateDoc(followingDocRef, {
+            followers: increment(1)
         });
     }
 
     async unfollowUser(followerId: string, followingId: string): Promise<void> {
-        const followRef = db.collection('following').doc(`${followerId}_${followingId}`);
-        const snapshot = await followRef.get();
+        const followRef = doc(modularDb, 'following', `${followerId}_${followingId}`);
+        const snapshot = await getDoc(followRef);
         if (!snapshot.exists) return;
 
-        await followRef.delete();
+        await deleteDoc(followRef);
 
         // Update counts
-        const followerRef = db.collection('users').doc(followerId);
-        const followingRef = db.collection('users').doc(followingId);
+        const followerDocRef = doc(modularDb, 'users', followerId);
+        const followingDocRef = doc(modularDb, 'users', followingId);
 
-        await followerRef.update({
-            following: firestore.FieldValue.increment(-1)
+        await updateDoc(followerDocRef, {
+            following: increment(-1)
         });
-        await followingRef.update({
-            followers: firestore.FieldValue.increment(-1)
+        await updateDoc(followingDocRef, {
+            followers: increment(-1)
         });
     }
 
     async isFollowing(followerId: string, followingId: string): Promise<boolean> {
         if (!followerId || !followingId) return false;
-        const followRef = db.collection('following').doc(`${followerId}_${followingId}`);
-        const snapshot = await followRef.get();
+        const followRef = doc(modularDb, 'following', `${followerId}_${followingId}`);
+        const snapshot = await getDoc(followRef);
         return snapshot.exists;
     }
 
     // SEARCH LOGIC
-    async searchUsers(query: string): Promise<UserProfile[]> {
-        if (!query.trim()) return [];
-        const lowerQuery = query.toLowerCase();
+    async searchUsers(queryStr: string): Promise<UserProfile[]> {
+        if (!queryStr.trim()) return [];
+        const lowerQuery = queryStr.toLowerCase();
 
-        const snapshot = await this.usersCollection
-            .where('username', '>=', lowerQuery)
-            .where('username', '<=', lowerQuery + '\uf8ff')
-            .limit(10)
-            .get();
+        const usersQuery = query(
+            this.usersCollection,
+            where('username', '>=', lowerQuery),
+            where('username', '<=', lowerQuery + '\uf8ff'),
+            limit(10)
+        );
+
+        const snapshot = await getDocs(usersQuery);
 
         return snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
     }

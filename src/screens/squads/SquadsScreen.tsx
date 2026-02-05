@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Image, TextInput, RefreshControl, Alert } from 'react-native';
-import { COLORS, SPACING } from '../../constants/theme';
-import { Search, Plus, Users, UserPlus, Lock } from 'lucide-react-native';
+import { COLORS, SPACING, FONTS } from '../../constants/theme';
+import { Search, Plus, Users, UserPlus, ShieldAlert } from 'lucide-react-native';
 import { useIsFocused } from '@react-navigation/native';
 import squadService, { Squad } from '../../api/squadService';
+import userService from '../../api/userService';
 import { firebaseAuth } from '../../api/firebase';
+import { DiagonalStreaksBackground } from '../../components/common/DiagonalStreaksBackground';
 
 const SquadsScreen = ({ navigation }: any) => {
     const isFocused = useIsFocused();
@@ -13,6 +15,7 @@ const SquadsScreen = ({ navigation }: any) => {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [inviteCode, setInviteCode] = useState('');
+    const [userProfile, setUserProfile] = useState<any>(null);
 
     const route = React.useRef(navigation.getState().routes.find((r: any) => r.name === 'SquadsTab')).current;
 
@@ -22,9 +25,30 @@ const SquadsScreen = ({ navigation }: any) => {
             if (params?.initialTab) {
                 setActiveTab(params.initialTab);
             }
+            loadUserProfile();
             loadSquads(params?.premiumOnly);
         }
     }, [isFocused, activeTab]);
+
+    const loadUserProfile = async () => {
+        const currentUser = firebaseAuth.currentUser;
+        if (currentUser) {
+            const profile = await userService.getUserProfile(currentUser.uid);
+            setUserProfile(profile);
+        }
+    };
+
+    const canViewSquad = (squad: Squad): boolean => {
+        if (!userProfile) return true; // Show all if profile not loaded yet
+
+        // Check age restriction
+        if (squad.ageRestriction === '18+') {
+            return userProfile.ageTier === 'first_teamer';
+        } else if (squad.ageRestriction === '13+') {
+            return userProfile.ageTier !== 'junior_baller';
+        }
+        return true; // 'all' age restriction
+    };
 
     const loadSquads = async (premiumOnly = false) => {
         setLoading(true);
@@ -80,6 +104,7 @@ const SquadsScreen = ({ navigation }: any) => {
 
     return (
         <SafeAreaView style={styles.container}>
+            <DiagonalStreaksBackground />
             <View style={styles.header}>
                 <Text style={styles.headerTitle}>Squads</Text>
                 <TouchableOpacity style={styles.createBtn} onPress={handleCreatePress}>
@@ -129,7 +154,7 @@ const SquadsScreen = ({ navigation }: any) => {
                     </View>
                 )}
 
-                {squads.map(squad => (
+                {squads.filter(canViewSquad).map(squad => (
                     <TouchableOpacity
                         key={squad.id}
                         style={styles.squadCard}
@@ -142,10 +167,10 @@ const SquadsScreen = ({ navigation }: any) => {
                         <View style={styles.squadInfo}>
                             <View style={styles.squadHeader}>
                                 <Text style={styles.squadName}>{squad.name}</Text>
-                                {squad.isPremium && (
-                                    <View style={styles.premiumBadge}>
-                                        <Lock color={COLORS.background} size={10} />
-                                        <Text style={styles.premiumText}>PREMIUM</Text>
+                                {squad.ageRestriction !== 'all' && (
+                                    <View style={styles.ageRestrictionBadge}>
+                                        <ShieldAlert color={COLORS.background} size={10} />
+                                        <Text style={styles.ageRestrictionBadgeText}>{squad.ageRestriction}</Text>
                                     </View>
                                 )}
                             </View>
@@ -155,7 +180,6 @@ const SquadsScreen = ({ navigation }: any) => {
                                     <Users color={COLORS.textSecondary} size={14} />
                                     <Text style={styles.statText}>{squad.memberCount}</Text>
                                 </View>
-                                {squad.isPremium && <Text style={styles.priceText}>{squad.price}</Text>}
                             </View>
                         </View>
                         <TouchableOpacity style={styles.joinBtn}>
@@ -201,7 +225,7 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         fontSize: 24,
-        fontWeight: '800',
+        fontFamily: FONTS.display.bold,
         color: COLORS.white,
     },
     createBtn: {
@@ -215,7 +239,7 @@ const styles = StyleSheet.create({
     },
     createBtnText: {
         fontSize: 14,
-        fontWeight: '700',
+        fontFamily: FONTS.display.semiBold,
         color: COLORS.background,
     },
     searchBar: {
@@ -233,6 +257,7 @@ const styles = StyleSheet.create({
         flex: 1,
         color: COLORS.white,
         fontSize: 15,
+        fontFamily: FONTS.body.regular,
     },
     tabs: {
         flexDirection: 'row',
@@ -250,7 +275,7 @@ const styles = StyleSheet.create({
     },
     tabText: {
         fontSize: 16,
-        fontWeight: '600',
+        fontFamily: FONTS.display.medium,
         color: COLORS.textSecondary,
     },
     tabTextActive: {
@@ -262,7 +287,7 @@ const styles = StyleSheet.create({
     },
     sectionTitle: {
         fontSize: 18,
-        fontWeight: '700',
+        fontFamily: FONTS.display.semiBold,
         color: COLORS.white,
         marginBottom: SPACING.md,
     },
@@ -295,25 +320,26 @@ const styles = StyleSheet.create({
     },
     squadName: {
         fontSize: 16,
-        fontWeight: '700',
+        fontFamily: FONTS.display.semiBold,
         color: COLORS.white,
     },
-    premiumBadge: {
+    ageRestrictionBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: COLORS.primary,
+        backgroundColor: '#FF9500',
         paddingHorizontal: 6,
         paddingVertical: 2,
         borderRadius: 4,
         gap: 2,
     },
-    premiumText: {
+    ageRestrictionBadgeText: {
         fontSize: 8,
-        fontWeight: '900',
+        fontFamily: FONTS.display.bold,
         color: COLORS.background,
     },
     squadDesc: {
         fontSize: 13,
+        fontFamily: FONTS.body.regular,
         color: COLORS.textSecondary,
         marginBottom: 8,
     },
@@ -329,12 +355,8 @@ const styles = StyleSheet.create({
     },
     statText: {
         fontSize: 12,
+        fontFamily: FONTS.body.regular,
         color: COLORS.textSecondary,
-    },
-    priceText: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: COLORS.primary,
     },
     joinBtn: {
         width: 40,
@@ -356,11 +378,12 @@ const styles = StyleSheet.create({
     },
     inviteTitle: {
         fontSize: 18,
-        fontWeight: '800',
+        fontFamily: FONTS.display.bold,
         color: COLORS.white,
     },
     inviteSubtitle: {
         fontSize: 13,
+        fontFamily: FONTS.body.regular,
         color: COLORS.textSecondary,
         marginTop: 4,
         marginBottom: SPACING.lg,
@@ -378,6 +401,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         color: COLORS.white,
         fontSize: 15,
+        fontFamily: FONTS.body.regular,
     },
     submitCodeBtn: {
         paddingHorizontal: 20,
@@ -387,7 +411,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     submitCodeText: {
-        fontWeight: '700',
+        fontFamily: FONTS.display.semiBold,
         color: COLORS.background,
     },
     emptyState: {
@@ -397,6 +421,7 @@ const styles = StyleSheet.create({
     emptyText: {
         color: COLORS.textSecondary,
         fontSize: 14,
+        fontFamily: FONTS.body.regular,
     },
 });
 

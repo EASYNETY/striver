@@ -35,29 +35,57 @@ const VideoFeed = ({
     const [visibleItemIndex, setVisibleItemIndex] = useState(initialScrollIndex);
     const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
     const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
+    const [localPosts, setLocalPosts] = useState<Post[]>(posts);
 
     const flatListRef = useRef<FlatList>(null);
 
+    // Update local posts when props change
+    useEffect(() => {
+        setLocalPosts(posts);
+    }, [posts]);
+
     // Initialize local state from props
     useEffect(() => {
-        // In a real app, we might bulk check 'isLiked' for these posts
-        // For now, we rely on post.likes count, but individual 'liked' state 
-        // would require a separate check or IsLiked field in Post
-        // Assuming Post has 'isLiked' property would be better, but based on existing code:
-        // We verify likes lazily or just optimistic update.
-        // To verify properly, we'd need postService.getLikedPosts() IDs.
         checkInteractions();
-    }, [posts]);
+        
+        // Set up real-time listener for post updates
+        const unsubscribers: (() => void)[] = [];
+        
+        localPosts.forEach(post => {
+            const unsubscribe = postService.subscribeToPostUpdates(post.id, (updatedPost) => {
+                if (updatedPost) {
+                    setLocalPosts(prev => prev.map(p => p.id === updatedPost.id ? updatedPost : p));
+                }
+            });
+            if (unsubscribe) unsubscribers.push(unsubscribe);
+        });
+        
+        return () => {
+            unsubscribers.forEach(unsub => unsub());
+        };
+    }, [localPosts.length]); // Only re-subscribe when number of posts changes
 
     const checkInteractions = async () => {
         const currentUser = firebaseAuth.currentUser;
-        if (!currentUser) return;
+        if (!currentUser || localPosts.length === 0) return;
 
-        // This is a simplified check. Ideally we fetch this data efficiently.
-        // For this implementation, we'll start empty and let user actions drive it,
-        // or effectively we should fetch "my likes" if possible.
-        // Existing HomeFeedScreen fetches nothing initially.
-        // We will improve this by checking cached status or assuming false until interaction.
+        // Check which posts the user has liked
+        const likedPostIds = new Set<string>();
+        const followingUserIds = new Set<string>();
+        
+        // Check likes and follows in parallel
+        await Promise.all(localPosts.map(async (post) => {
+            const [isLiked, isFollowing] = await Promise.all([
+                postService.hasLikedPost(post.id),
+                post.userId !== currentUser.uid ? userService.isFollowing(currentUser.uid, post.userId) : Promise.resolve(false)
+            ]);
+            
+            if (isLiked) likedPostIds.add(post.id);
+            if (isFollowing) followingUserIds.add(post.userId);
+        }));
+        
+        setLikedPosts(likedPostIds);
+        setFollowingIds(followingUserIds);
     };
 
     const handleLike = async (postId: string) => {
@@ -180,7 +208,7 @@ const VideoFeed = ({
     return (
         <FlatList
             ref={flatListRef}
-            data={posts}
+            data={localPosts}
             renderItem={renderItem}
             keyExtractor={item => item.id}
             pagingEnabled

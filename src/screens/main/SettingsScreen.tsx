@@ -1,8 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Alert } from 'react-native';
-import { COLORS, SPACING } from '../../constants/theme';
+import { COLORS, SPACING, FONTS } from '../../constants/theme';
 import { ChevronLeft, LogOut, Bell, Shield, HelpCircle, FileText, User } from 'lucide-react-native';
 import { firebaseAuth } from '../../api/firebase';
+import { DiagonalStreaksBackground } from '../../components/common/DiagonalStreaksBackground';
 
 const SettingsScreen = ({ navigation }: any) => {
 
@@ -40,6 +41,7 @@ const SettingsScreen = ({ navigation }: any) => {
 
     return (
         <SafeAreaView style={styles.container}>
+            <DiagonalStreaksBackground />
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
                     <ChevronLeft color={COLORS.white} size={28} />
@@ -89,7 +91,7 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         fontSize: 18,
-        fontWeight: '700',
+        fontFamily: FONTS.display.semiBold,
         color: COLORS.white,
     },
     content: {
@@ -97,7 +99,7 @@ const styles = StyleSheet.create({
     },
     sectionTitle: {
         fontSize: 14,
-        fontWeight: '700',
+        fontFamily: FONTS.body.bold,
         color: COLORS.textSecondary,
         marginBottom: SPACING.sm,
         marginTop: SPACING.md,
@@ -121,7 +123,7 @@ const styles = StyleSheet.create({
     itemTitle: {
         fontSize: 16,
         color: COLORS.white,
-        fontWeight: '500',
+        fontFamily: FONTS.body.medium,
     },
     logoutBtn: {
         flexDirection: 'row',
@@ -135,7 +137,7 @@ const styles = StyleSheet.create({
     },
     logoutText: {
         color: COLORS.error,
-        fontWeight: '700',
+        fontFamily: FONTS.display.semiBold,
         fontSize: 16,
     },
     version: {
@@ -143,6 +145,7 @@ const styles = StyleSheet.create({
         color: COLORS.textSecondary,
         fontSize: 12,
         marginTop: SPACING.xl,
+        fontFamily: FONTS.body.regular,
     },
 });
 

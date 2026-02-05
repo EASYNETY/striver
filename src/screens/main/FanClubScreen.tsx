@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Image, FlatList } from 'react-native';
 import { COLORS, SPACING } from '../../constants/theme';
-import { HeartHandshake, Star, Users, Crown, ChevronRight, MessageSquare, Trophy } from 'lucide-react-native';
+import { HeartHandshake, Star, Users, Crown, ChevronRight, MessageSquare, Trophy, GraduationCap } from 'lucide-react-native';
 import { firebaseAuth } from '../../api/firebase';
 import userService, { UserProfile } from '../../api/userService';
 import paymentService from '../../api/paymentService';
@@ -45,9 +45,9 @@ const FanClubScreen = ({ navigation }: any) => {
             case '1': // Legendary Squads
                 navigation.navigate('SquadsTab', { premiumOnly: true });
                 break;
-            case '2': // Scout Network
-                // Search for "scout" or navigate to a special filtered feed
-                navigation.navigate('HomeFeed', { searchQuery: 'scout' });
+            case '2': // Mentor Connect
+                // Navigate to mentor/coaching section (to be implemented)
+                Alert.alert('Mentor Connect', 'Connect with verified coaches and mentors to improve your skills. Coming soon!');
                 break;
             case '3': // Exclusive Rewards
                 navigation.navigate('Rewards');
@@ -65,9 +65,9 @@ const FanClubScreen = ({ navigation }: any) => {
         },
         {
             id: '2',
-            title: 'Scout Network',
-            subtitle: 'Get discovered by verified Striver scouts',
-            icon: <Users color={COLORS.primary} size={24} />,
+            title: 'Mentor Connect',
+            subtitle: 'Learn from verified coaches and mentors',
+            icon: <GraduationCap color={COLORS.primary} size={24} />,
             color: 'rgba(143, 251, 185, 0.1)'
         },
         {

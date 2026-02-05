@@ -1,0 +1,14 @@
+{
+  "name": "ondato-proxy",
+  "version": "1.0.0",
+  "description": "Cloudflare Worker proxy for Ondato API",
+  "main": "ondato-proxy-worker.js",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "tail": "wrangler tail"
+  },
+  "keywords": ["cloudflare", "worker", "ondato", "proxy"],
+  "author": "Striver App",
+  "license": "MIT"
+}
