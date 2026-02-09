@@ -521,48 +521,75 @@ const MemoizedPostItem = React.memo(({ item, index, isFocused, visibleItemIndex,
     const isFollowing = followingIds.has(item.userId);
     const isCurrentUser = firebaseAuth.currentUser?.uid === item.userId;
 
+    // Create stable callback references for runOnJS
+    const handleExpandThreads = useCallback(() => {
+        onExpandThreads(item.id);
+    }, [item.id, onExpandThreads]);
+
+    const handleScrollToNext = useCallback(() => {
+        scrollToIndex(index + 1);
+    }, [index, scrollToIndex]);
+
+    const handleNavigateToUpload = useCallback(() => {
+        navigation.navigate('Upload', { 
+            responseTo: item.id,
+            isResponse: true
+        });
+    }, [item.id, navigation]);
+
+    const handleRelevancyAlert = useCallback(() => {
+        Alert.alert(
+            'Content Relevancy',
+            'Is this content relevant to you?',
+            [
+                { text: 'Relevant', onPress: () => onRelevancyChange(item.id, true) },
+                { text: 'Not Relevant', onPress: () => onRelevancyChange(item.id, false) },
+                { text: 'Cancel', style: 'cancel' }
+            ]
+        );
+    }, [item.id, onRelevancyChange]);
+
     // Gesture Handling for this specific video item
     const swipeUpGesture = Gesture.Pan()
+        .activeOffsetY(-50)
+        .failOffsetX([-50, 50])
         .onEnd((e) => {
+            'worklet';
             if (e.velocityY < -500) { // Swipe up detected
-                runOnJS(onExpandThreads)(item.id);
+                runOnJS(handleExpandThreads)();
             }
         });
 
     const swipeLeftGesture = Gesture.Pan()
+        .activeOffsetX(-50)
+        .failOffsetY([-50, 50])
         .onEnd((e) => {
-            if (e.velocityX < -500 && Math.abs(e.velocityX) > Math.abs(e.velocityY)) { // Swipe left detected
-                // Scroll to next video
-                runOnJS(scrollToIndex)(index + 1);
+            'worklet';
+            if (e.velocityX < -500) { // Swipe left detected
+                runOnJS(handleScrollToNext)();
             }
         });
 
     const swipeRightGesture = Gesture.Pan()
+        .activeOffsetX(50)
+        .failOffsetY([-50, 50])
         .onEnd((e) => {
-            if (e.velocityX > 500 && Math.abs(e.velocityX) > Math.abs(e.velocityY)) { // Swipe right detected
-                runOnJS(navigation.navigate)('Upload', { 
-                    responseTo: item.id,
-                    isResponse: true
-                });
+            'worklet';
+            if (e.velocityX > 500) { // Swipe right detected
+                runOnJS(handleNavigateToUpload)();
             }
         });
 
     const longPressGesture = Gesture.LongPress()
+        .minDuration(800)
         .onEnd((e, success) => {
+            'worklet';
             if (success) {
-                runOnJS(Alert.alert)(
-                    'Content Relevancy',
-                    'Is this content relevant to you?',
-                    [
-                        { text: 'Relevant', onPress: () => onRelevancyChange(item.id, true) },
-                        { text: 'Not Relevant', onPress: () => onRelevancyChange(item.id, false) },
-                        { text: 'Cancel', style: 'cancel' }
-                    ]
-                );
+                runOnJS(handleRelevancyAlert)();
             }
         });
 
-    const composedGesture = Gesture.Race(swipeUpGesture, swipeLeftGesture, swipeRightGesture, longPressGesture);
+    const composedGesture = Gesture.Simultaneous(swipeUpGesture, swipeLeftGesture, swipeRightGesture, longPressGesture);
 
     return (
         <GestureDetector gesture={composedGesture}>
