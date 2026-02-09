@@ -137,17 +137,31 @@ class SquadService {
         const currentUser = firebaseAuth.currentUser;
         if (!currentUser) throw new Error('Not authenticated');
 
-        await updateDoc(doc(this.squadsCollection, squadId), {
-            members: arrayUnion(currentUser.uid),
-            memberCount: increment(1),
-        });
+        // Check if already a member
+        const isMember = await this.isMember(squadId, currentUser.uid);
+        if (isMember) {
+            throw new Error('Already a member of this squad');
+        }
 
-        await addDoc(this.squadMembersCollection, {
-            squadId,
-            userId: currentUser.uid,
-            role: 'member',
-            joinedAt: serverTimestamp(),
-        });
+        try {
+            await updateDoc(doc(this.squadsCollection, squadId), {
+                members: arrayUnion(currentUser.uid),
+                memberCount: increment(1),
+            });
+
+            await addDoc(this.squadMembersCollection, {
+                squadId,
+                userId: currentUser.uid,
+                role: 'member',
+                joinedAt: serverTimestamp(),
+            });
+        } catch (error: any) {
+            console.error('[SquadService] Join error:', error);
+            if (error.code === 'permission-denied') {
+                throw new Error('Permission denied. Check your account permissions.');
+            }
+            throw error;
+        }
     }
 
     // Leave a squad

@@ -119,13 +119,17 @@ const UploadScreen = ({ navigation, route }: any) => {
         try {
             console.log('[UploadScreen] Starting Cloudflare upload with videoUri:', videoUri);
 
+            // Get challenge info from route params
+            const { challengeId, challengePostId } = route.params || {};
+
             // Upload to Cloudflare with progress tracking
             const postId = await uploadVideoToCloudflare(
                 videoUri,
                 {
                     caption: title,
                     hashtags: tags.split(',').map(tag => tag.trim()).filter(t => t.length > 0),
-                    challengeId: squadId
+                    challengeId: squadId || challengeId,
+                    responseTo: responseTo || challengePostId
                 },
                 (progress: UploadProgress) => {
                     setUploadProgress(progress.percentage);
@@ -135,14 +139,75 @@ const UploadScreen = ({ navigation, route }: any) => {
 
             console.log('[UploadScreen] Video uploaded successfully, postId:', postId);
 
+            // Award coins for challenge completion ONLY after successful upload
+            if (challengeId || squadId) {
+                const { RewardService } = require('../../api/rewardService');
+                const { firebaseAuth } = require('../../api/firebase');
+                const currentUser = firebaseAuth.currentUser;
+                
+                if (currentUser) {
+                    try {
+                        await RewardService.trackActivity(currentUser.uid, 'participate_legend_challenge');
+                        console.log('[UploadScreen] Challenge completion coins awarded');
+                    } catch (rewardError) {
+                        console.error('[UploadScreen] Failed to award challenge coins:', rewardError);
+                    }
+                }
+            }
+
+            // Award coins for posting a response ONLY after successful upload
+            if (responseTo || route.params?.isResponse) {
+                const { RewardService } = require('../../api/rewardService');
+                const { firebaseAuth } = require('../../api/firebase');
+                const currentUser = firebaseAuth.currentUser;
+                
+                if (currentUser) {
+                    try {
+                        await RewardService.trackActivity(currentUser.uid, 'post_response');
+                        console.log('[UploadScreen] Response post coins awarded (15 coins)');
+                    } catch (rewardError) {
+                        console.error('[UploadScreen] Failed to award response coins:', rewardError);
+                    }
+                }
+            }
+
+            // Award coins for posting a response video
+            if (responseTo || challengePostId) {
+                const { RewardService } = require('../../api/rewardService');
+                const { firebaseAuth } = require('../../api/firebase');
+                const currentUser = firebaseAuth.currentUser;
+                
+                if (currentUser) {
+                    try {
+                        await RewardService.trackActivity(currentUser.uid, 'post_response');
+                        console.log('[UploadScreen] Response post coins awarded');
+                    } catch (rewardError) {
+                        console.error('[UploadScreen] Failed to award response coins:', rewardError);
+                    }
+                }
+            }
+
             const userData = await userService.getCurrentUserProfile();
             const isJunior = userData?.ageTier === 'junior_baller';
 
+            let successMessage = '';
+            if (challengeId || squadId) {
+                successMessage = isJunior 
+                    ? "Great challenge video! It has been sent to your parent for approval. You'll earn 50 coins once approved!"
+                    : "Challenge completed! Your video has been posted and you earned 50 coins!";
+            } else if (responseTo || route.params?.isResponse) {
+                successMessage = isJunior
+                    ? "Great response! It has been sent to your parent for approval. You'll earn 15 coins once approved!"
+                    : "Response posted! You earned 15 coins for responding to a video!";
+            } else {
+                successMessage = isJunior
+                    ? "Great video! It has been sent to your parent for approval before it goes live on the feed."
+                    : "Your video has been posted and is being processed. It will appear in the feed shortly!";
+            }
+
             Alert.alert(
                 isJunior ? "Review Required" : "Success",
-                isJunior
-                    ? "Great video! It has been sent to your parent for approval before it goes live on the feed."
-                    : "Your video has been posted and is being processed. It will appear in the feed shortly!",
+                successMessage,
                 [{ text: "Great!", onPress: () => navigation.navigate('HomeFeed') }]
             );
         } catch (error: any) {

@@ -245,6 +245,30 @@ class PostService {
             console.error('Comments listener error:', err);
         });
     }
+
+    async getSquadPosts(squadId: string, limitCount: number = 30): Promise<Post[]> {
+        const q = query(
+            this.postsCollection,
+            where('squadId', '==', squadId),
+            where('status', '==', 'active'),
+            orderBy('createdAt', 'desc'),
+            limit(limitCount)
+        );
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Post));
+    }
+
+    async getUserPosts(userId: string, limitCount: number = 30): Promise<Post[]> {
+        const q = query(
+            this.postsCollection,
+            where('userId', '==', userId),
+            where('status', '==', 'active'),
+            orderBy('createdAt', 'desc'),
+            limit(limitCount)
+        );
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Post));
+    }
 }
 
 export default new PostService();

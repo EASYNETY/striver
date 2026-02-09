@@ -76,26 +76,35 @@ service cloud.firestore {
     // Posts Collection
     match /posts/{postId} {
       allow read: if isSignedIn();
-      allow write, delete: if isAdmin();
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if isAdmin();
     }
 
     // Direct Video Assets
     match /videos/{videoId} {
       allow read: if isSignedIn();
-      allow write, delete: if isAdmin();
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
     }
 
     // Squads Collection
     match /squads/{squadId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && (request.auth.uid == resource.data.creatorId || isAdmin());
+      allow create: if isSignedIn() && request.resource.data.creatorId == request.auth.uid;
+      allow update: if isSignedIn() && (
+        request.auth.uid == resource.data.creatorId || 
+        isAdmin() ||
+        // Allow users to add themselves to members array
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberCount', 'members']) &&
+         request.resource.data.members.hasAll(resource.data.members))
+      );
       allow delete: if isAdmin();
     }
 
     match /squadMembers/{memberId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if isSignedIn() && (request.auth.uid == (resource == null ? request.resource.data.userId : resource.data.userId) || isAdmin());
     }
 

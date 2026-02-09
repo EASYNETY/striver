@@ -5,6 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Settings } from 'react-native-fbsdk-next';
 import { firebaseAuth, initAppCheck } from './src/api/firebase';
 import userService from './src/api/userService';
+import NotificationService from './src/services/notificationService';
 
 // Navigators
 import AuthNavigator from './src/navigation/AuthNavigator';
@@ -33,6 +34,9 @@ const App = () => {
         // Initialize App Check
         initAppCheck().catch(console.error);
 
+        // Initialize Push Notifications
+        NotificationService.initialize();
+
         let profileUnsubscribe: (() => void) | null = null;
 
         const authUnsubscribe = firebaseAuth.onAuthStateChanged(async (u) => {
@@ -46,6 +50,13 @@ const App = () => {
 
             if (u) {
                 setLoadingProfile(true);
+                
+                // Request notification permission and get FCM token
+                const hasPermission = await NotificationService.requestPermission();
+                if (hasPermission) {
+                    await NotificationService.getFCMToken();
+                }
+                
                 // Listen to profile changes in real-time
                 profileUnsubscribe = userService.onProfileChange(u.uid, (profile) => {
                     setIsOnboarding(!profile?.onboardingComplete);

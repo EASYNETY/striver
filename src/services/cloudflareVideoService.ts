@@ -5,6 +5,7 @@ export interface VideoMetadata {
   hashtags?: string[];
   location?: string;
   challengeId?: string;
+  responseTo?: string;
 }
 
 export interface UploadProgress {
@@ -139,11 +140,14 @@ export const uploadVideoToCloudflare = async (
       thumbnail: thumbnailUrl,
       previewGif: video.preview || '',
       duration: video.duration || 0,
-      status: video.status?.state || 'processing',
+      status: 'active', // Always set to 'active' for immediate display
+      cloudflareStatus: video.status?.state || 'processing', // Store Cloudflare status separately
       caption: metadata.caption || '',
       hashtags: metadata.hashtags || [],
       location: metadata.location || null,
       challengeId: metadata.challengeId || null,
+      responseTo: metadata.responseTo || null,
+      squadId: metadata.challengeId || null, // For backward compatibility
       likes: 0,
       comments: 0,
       views: 0,

@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
         padding: SPACING.md,
     },
     content: {
-        paddingBottom: SPACING.xl,
+        paddingBottom: 100, // Account for tab bar + safe area
     },
     profileInfo: {
         alignItems: 'center',

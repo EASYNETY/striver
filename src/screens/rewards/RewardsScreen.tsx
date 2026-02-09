@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
     tabText: { color: COLORS.textSecondary, fontFamily: FONTS.display.medium },
     activeTabText: { color: COLORS.white },
 
-    scrollContent: { padding: SPACING.md },
+    scrollContent: { padding: SPACING.md, paddingBottom: 100 }, // Account for tab bar
     sectionTitle: { fontSize: 18, fontFamily: FONTS.display.bold, color: 'white', marginBottom: 16, marginTop: 10 },
     taskCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: COLORS.surface, padding: 16, borderRadius: 16, marginBottom: 12, elevation: 4 },
     taskLeft: { flexDirection: 'row', alignItems: 'center', gap: 16, flex: 1, marginRight: 10 },

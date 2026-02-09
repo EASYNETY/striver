@@ -154,39 +154,52 @@ const SquadsScreen = ({ navigation }: any) => {
                     </View>
                 )}
 
-                {squads.filter(canViewSquad).map(squad => (
-                    <TouchableOpacity
-                        key={squad.id}
-                        style={styles.squadCard}
-                        onPress={() => handleSquadPress(squad.id)}
-                    >
-                        <Image
-                            source={{ uri: squad.image || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=400' }}
-                            style={styles.squadImage}
-                        />
-                        <View style={styles.squadInfo}>
-                            <View style={styles.squadHeader}>
-                                <Text style={styles.squadName}>{squad.name}</Text>
-                                {squad.ageRestriction !== 'all' && (
-                                    <View style={styles.ageRestrictionBadge}>
-                                        <ShieldAlert color={COLORS.background} size={10} />
-                                        <Text style={styles.ageRestrictionBadgeText}>{squad.ageRestriction}</Text>
+                {squads.filter(canViewSquad).map(squad => {
+                    const currentUser = firebaseAuth.currentUser;
+                    const isMember = currentUser && squad.members?.includes(currentUser.uid);
+                    
+                    return (
+                        <TouchableOpacity
+                            key={squad.id}
+                            style={styles.squadCard}
+                            onPress={() => handleSquadPress(squad.id)}
+                        >
+                            <Image
+                                source={{ uri: squad.image || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=400' }}
+                                style={styles.squadImage}
+                            />
+                            <View style={styles.squadInfo}>
+                                <View style={styles.squadHeader}>
+                                    <Text style={styles.squadName}>{squad.name}</Text>
+                                    {squad.ageRestriction && squad.ageRestriction !== 'all' && (
+                                        <View style={styles.ageRestrictionBadge}>
+                                            <ShieldAlert color={COLORS.background} size={10} />
+                                            <Text style={styles.ageRestrictionBadgeText}>{squad.ageRestriction}</Text>
+                                        </View>
+                                    )}
+                                </View>
+                                <Text style={styles.squadDesc} numberOfLines={2}>{squad.description}</Text>
+                                <View style={styles.squadStats}>
+                                    <View style={styles.stat}>
+                                        <Users color={COLORS.textSecondary} size={14} />
+                                        <Text style={styles.statText}>{squad.memberCount || 0}</Text>
                                     </View>
-                                )}
-                            </View>
-                            <Text style={styles.squadDesc} numberOfLines={2}>{squad.description}</Text>
-                            <View style={styles.squadStats}>
-                                <View style={styles.stat}>
-                                    <Users color={COLORS.textSecondary} size={14} />
-                                    <Text style={styles.statText}>{squad.memberCount}</Text>
                                 </View>
                             </View>
-                        </View>
-                        <TouchableOpacity style={styles.joinBtn}>
-                            <UserPlus color={COLORS.primary} size={20} />
+                            {!isMember && (
+                                <TouchableOpacity 
+                                    style={styles.joinBtn}
+                                    onPress={(e) => {
+                                        e.stopPropagation();
+                                        handleSquadPress(squad.id);
+                                    }}
+                                >
+                                    <UserPlus color={COLORS.primary} size={20} />
+                                </TouchableOpacity>
+                            )}
                         </TouchableOpacity>
-                    </TouchableOpacity>
-                ))}
+                    );
+                })}
 
                 {activeTab === 'Explore' && (
                     <View style={styles.inviteCard}>
@@ -283,7 +296,7 @@ const styles = StyleSheet.create({
     },
     content: {
         padding: SPACING.md,
-        paddingBottom: 40,
+        paddingBottom: 100, // Account for tab bar + safe area
     },
     sectionTitle: {
         fontSize: 18,

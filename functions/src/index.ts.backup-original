@@ -1,0 +1,16 @@
+import { setGlobalOptions } from "firebase-functions/v2";
+import * as admin from 'firebase-admin';
+
+// Initialize Admin
+admin.initializeApp();
+
+setGlobalOptions({ region: 'us-central1' });
+
+// Import and export notification functions
+export { 
+    onPostLiked, 
+    onPostCommented, 
+    onNewFollower, 
+    onVideoResponse, 
+    onChallengeInvite 
+} from './notifications-simple';

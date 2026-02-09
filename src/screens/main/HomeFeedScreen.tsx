@@ -3,7 +3,7 @@ import { View, StyleSheet, FlatList, Dimensions, StatusBar, Text, TouchableOpaci
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HLSVideoPlayer from '../../components/HLSVideoPlayer';
 import { COLORS, SPACING } from '../../constants/theme';
-import { Heart, MessageCircle, Share2, Search, Bell, Coins, ShieldCheck, X, UserPlus, UserCheck, Trophy, Camera, Home, ArrowRight, MessageSquare, Plus, Star } from 'lucide-react-native';
+import { Heart, MessageCircle, Share2, Search, Bell, Coins, ShieldCheck, X, UserPlus, UserCheck, Trophy, Camera, Home, MessageSquare, Plus, Star, ChevronUp } from 'lucide-react-native';
 import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, runOnJS } from 'react-native-reanimated';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
@@ -237,16 +237,21 @@ const styles = StyleSheet.create({
     },
     swipeHint: {
         position: 'absolute',
-        right: 15,
-        top: '50%',
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        width: 30,
-        height: 60,
-        borderTopLeftRadius: 30,
-        borderBottomLeftRadius: 30,
-        justifyContent: 'center',
+        bottom: 140,
+        alignSelf: 'center',
+        backgroundColor: 'rgba(255,255,255,0.15)',
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        flexDirection: 'row',
         alignItems: 'center',
+        gap: 6,
         zIndex: 5,
+    },
+    swipeHintText: {
+        color: COLORS.white,
+        fontSize: 11,
+        fontWeight: '600',
     },
     rejectedContainer: {
         flex: 1,
@@ -498,6 +503,7 @@ interface PostItemProps {
     toggleFollow: (targetUserId: string) => void;
     onRelevancyChange: (postId: string, relevant: boolean) => void;
     onExpandThreads: (postId: string) => void;
+    scrollToIndex: (index: number) => void;
 }
 
 // Sub-component for the Video Progress Bar
@@ -508,13 +514,38 @@ const VideoProgressBar = ({ progress }: { progress: number }) => (
 );
 
 // Memoized Post component to prevent unnecessary re-renders
-const MemoizedPostItem = React.memo(({ item, index, isFocused, visibleItemIndex, likedPosts, isChildMode, navigation, handleShare, toggleLike, followingIds, toggleFollow, onRelevancyChange, onExpandThreads }: PostItemProps) => {
+const MemoizedPostItem = React.memo(({ item, index, isFocused, visibleItemIndex, likedPosts, isChildMode, navigation, handleShare, toggleLike, followingIds, toggleFollow, onRelevancyChange, onExpandThreads, scrollToIndex }: PostItemProps) => {
     const isPaused = !isFocused || visibleItemIndex !== index;
     const isLiked = likedPosts.has(item.id);
     const [progress, setProgress] = useState(0);
+    const isFollowing = followingIds.has(item.userId);
+    const isCurrentUser = firebaseAuth.currentUser?.uid === item.userId;
 
     // Gesture Handling for this specific video item
-     
+    const swipeUpGesture = Gesture.Pan()
+        .onEnd((e) => {
+            if (e.velocityY < -500) { // Swipe up detected
+                runOnJS(onExpandThreads)(item.id);
+            }
+        });
+
+    const swipeLeftGesture = Gesture.Pan()
+        .onEnd((e) => {
+            if (e.velocityX < -500 && Math.abs(e.velocityX) > Math.abs(e.velocityY)) { // Swipe left detected
+                // Scroll to next video
+                runOnJS(scrollToIndex)(index + 1);
+            }
+        });
+
+    const swipeRightGesture = Gesture.Pan()
+        .onEnd((e) => {
+            if (e.velocityX > 500 && Math.abs(e.velocityX) > Math.abs(e.velocityY)) { // Swipe right detected
+                runOnJS(navigation.navigate)('Upload', { 
+                    responseTo: item.id,
+                    isResponse: true
+                });
+            }
+        });
 
     const longPressGesture = Gesture.LongPress()
         .onEnd((e, success) => {
@@ -531,8 +562,10 @@ const MemoizedPostItem = React.memo(({ item, index, isFocused, visibleItemIndex,
             }
         });
 
+    const composedGesture = Gesture.Race(swipeUpGesture, swipeLeftGesture, swipeRightGesture, longPressGesture);
+
     return (
-        <GestureDetector gesture={longPressGesture}>
+        <GestureDetector gesture={composedGesture}>
             <View style={styles.postContainer}>
                 {item.status === 'rejected' ? (
                     <View style={styles.rejectedContainer}>
@@ -556,6 +589,12 @@ const MemoizedPostItem = React.memo(({ item, index, isFocused, visibleItemIndex,
 
                 {/* Engagement Overlay */}
                 <View style={styles.overlay}>
+                    {/* Swipe Up Hint */}
+                    <View style={styles.swipeHint}>
+                        <ChevronUp color={COLORS.white} size={16} />
+                        <Text style={styles.swipeHintText}>Swipe up for responses</Text>
+                    </View>
+
                     <View style={styles.rightActions}>
                         {/* Striver Level Badge (Icon Only per user request) */}
                         <TouchableOpacity
@@ -590,7 +629,10 @@ const MemoizedPostItem = React.memo(({ item, index, isFocused, visibleItemIndex,
 
                         <TouchableOpacity
                             style={[styles.actionBtn, styles.responseBtn]}
-                            onPress={() => navigation.navigate('Upload', { responseTo: item.id })}
+                            onPress={() => navigation.navigate('Upload', { 
+                                responseTo: item.id,
+                                isResponse: true  // Flag to track this is a response
+                            })}
                         >
                             <Plus color={COLORS.background} size={28} strokeWidth={3} />
                         </TouchableOpacity>
@@ -619,12 +661,12 @@ const MemoizedPostItem = React.memo(({ item, index, isFocused, visibleItemIndex,
                                             <Trophy color={COLORS.background} size={8} />
                                         </View>
                                     )}
-                                    {firebaseAuth.currentUser?.uid !== item.userId && (
+                                    {!isCurrentUser && (
                                         <TouchableOpacity
-                                            style={[styles.followBtn, followingIds.has(item.userId) && styles.followingBtn]}
+                                            style={[styles.followBtn, isFollowing && styles.followingBtn]}
                                             onPress={() => toggleFollow(item.userId)}
                                         >
-                                            {followingIds.has(item.userId) ? (
+                                            {isFollowing ? (
                                                 <UserCheck color={COLORS.primary} size={16} />
                                             ) : (
                                                 <UserPlus color={COLORS.primary} size={16} />
@@ -644,8 +686,11 @@ const MemoizedPostItem = React.memo(({ item, index, isFocused, visibleItemIndex,
                             <TouchableOpacity
                                 style={styles.challengeBtn}
                                 onPress={() => {
-                                    RewardService.trackActivity(firebaseAuth.currentUser?.uid || '', 'participate_legend_challenge');
-                                    Alert.alert('Challenge Joined!', 'You earned 50 coins for participating in this Legend Hero Thread.');
+                                    // Navigate to upload screen with challenge context
+                                    navigation.navigate('Upload', { 
+                                        challengeId: item.squadId,
+                                        challengePostId: item.id 
+                                    });
                                 }}
                             >
                                 <Star color={COLORS.background} size={18} fill={COLORS.background} />
@@ -656,13 +701,21 @@ const MemoizedPostItem = React.memo(({ item, index, isFocused, visibleItemIndex,
 
                     <VideoProgressBar progress={progress} />
                 </View>
-
-                {/* Swipe Left Hint */}
-                <View style={styles.swipeHint}>
-                    <ArrowRight color={COLORS.white} size={20} />
-                </View>
             </View>
         </GestureDetector>
+    );
+}, (prevProps, nextProps) => {
+    // Custom comparison function for better performance
+    return (
+        prevProps.item.id === nextProps.item.id &&
+        prevProps.index === nextProps.index &&
+        prevProps.isFocused === nextProps.isFocused &&
+        prevProps.visibleItemIndex === nextProps.visibleItemIndex &&
+        prevProps.likedPosts.has(prevProps.item.id) === nextProps.likedPosts.has(nextProps.item.id) &&
+        prevProps.followingIds.has(prevProps.item.userId) === nextProps.followingIds.has(nextProps.item.userId) &&
+        prevProps.isChildMode === nextProps.isChildMode &&
+        prevProps.item.likes === nextProps.item.likes &&
+        prevProps.item.comments === nextProps.item.comments
     );
 });
 
@@ -683,6 +736,7 @@ const HomeFeedScreen = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
     const [showSearch, setShowSearch] = useState(false);
+    const flatListRef = useRef<FlatList>(null);
 
     // Filter feed based on onboarding interests if needed
     useEffect(() => {
@@ -707,19 +761,29 @@ const HomeFeedScreen = () => {
             if (index !== visibleItemIndex) {
                 setVisibleItemIndex(index);
 
-                // Optimized coin tracking: Only track if it's a new video and hasn't been tracked this session
+                // Track video view for rewards - only if it's a new video
                 if (index !== lastTrackedIndex.current) {
                     lastTrackedIndex.current = index;
-                    // Debounce coin awarding to prevent bridge congestion
-                    if (awardCoinsDebounceTimer.current) {
-                        clearTimeout(awardCoinsDebounceTimer.current);
-                    }
-                    awardCoinsDebounceTimer.current = setTimeout(() => {
-                        const currentPostId = posts[index]?.id;
-                        if (currentPostId) {
-                            RewardService.trackActivity(firebaseAuth.currentUser?.uid || '', 'watch_video', { postId: currentPostId }).catch(console.error);
+                    const currentPostId = posts[index]?.id;
+                    
+                    if (currentPostId && firebaseAuth.currentUser) {
+                        // Debounce coin awarding to prevent bridge congestion
+                        if (awardCoinsDebounceTimer.current) {
+                            clearTimeout(awardCoinsDebounceTimer.current);
                         }
-                    }, 1000); // Award coins after 1 second of stable view
+                        awardCoinsDebounceTimer.current = setTimeout(async () => {
+                            try {
+                                await RewardService.trackActivity(
+                                    firebaseAuth.currentUser?.uid || '', 
+                                    'watch_video', 
+                                    { postId: currentPostId }
+                                );
+                                console.log('[HomeFeedScreen] Video watch tracked for rewards');
+                            } catch (error) {
+                                console.error('[HomeFeedScreen] Failed to track video watch:', error);
+                            }
+                        }, 1000); // Award coins after 1 second of stable view
+                    }
                 }
             }
         }
@@ -736,6 +800,10 @@ const HomeFeedScreen = () => {
 
         if (activeTab === 'For You') {
             unsubscribe = postService.subscribeToFeedPosts((updatedPosts) => {
+                console.log('[HomeFeedScreen] Feed posts received:', updatedPosts.length);
+                if (updatedPosts.length === 0) {
+                    console.warn('[HomeFeedScreen] No posts found - check Firestore for posts with status="active"');
+                }
                 // Initial personalization logic: prefer posts matching interests
                 const filtered = updatedPosts.sort((a, b) => {
                     const aMatches = a.hashtags?.some(h => limitByInterests.includes(h)) ? 1 : 0;
@@ -748,6 +816,7 @@ const HomeFeedScreen = () => {
             });
         } else {
             unsubscribe = postService.subscribeToFollowingFeed((updatedPosts) => {
+                console.log('[HomeFeedScreen] Following feed posts received:', updatedPosts.length);
                 setPosts(updatedPosts);
                 setLoading(false);
                 setRefreshing(false);
@@ -894,6 +963,12 @@ const HomeFeedScreen = () => {
         setShowThreads(true);
     };
 
+    const scrollToIndex = useCallback((targetIndex: number) => {
+        if (targetIndex >= 0 && targetIndex < posts.length && flatListRef.current) {
+            flatListRef.current.scrollToIndex({ index: targetIndex, animated: true });
+        }
+    }, [posts.length]);
+
     const renderItem = useCallback(({ item, index }: { item: Post; index: number }) => (
         <MemoizedPostItem
             item={item}
@@ -909,8 +984,9 @@ const HomeFeedScreen = () => {
             toggleFollow={toggleFollow}
             onRelevancyChange={handleRelevancy}
             onExpandThreads={handleThreads}
+            scrollToIndex={scrollToIndex}
         />
-    ), [isFocused, visibleItemIndex, likedPosts, isChildMode, navigation, handleShare, toggleLike, followingIds, toggleFollow]);
+    ), [isFocused, visibleItemIndex, likedPosts, isChildMode, navigation, handleShare, toggleLike, followingIds, toggleFollow, scrollToIndex]);
 
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
@@ -965,13 +1041,13 @@ const HomeFeedScreen = () => {
                 </View>
 
                 <FlatList
+                    ref={flatListRef}
                     data={posts}
                     renderItem={renderItem}
                     keyExtractor={(item) => item.id}
                     pagingEnabled
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    snapToInterval={WINDOW_WIDTH}
+                    showsVerticalScrollIndicator={false}
+                    snapToInterval={WINDOW_HEIGHT}
                     snapToAlignment="start"
                     decelerationRate="fast"
                     onViewableItemsChanged={onViewableItemsChanged}
@@ -981,12 +1057,34 @@ const HomeFeedScreen = () => {
                     windowSize={3}
                     removeClippedSubviews={Platform.OS === 'android'}
                     getItemLayout={(data, index) => ({
-                        length: WINDOW_WIDTH,
-                        offset: WINDOW_WIDTH * index,
+                        length: WINDOW_HEIGHT,
+                        offset: WINDOW_HEIGHT * index,
                         index: index ?? 0,
                     })}
                     refreshControl={
                         <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={COLORS.white} />
+                    }
+                    ListEmptyComponent={
+                        !loading ? (
+                            <View style={[styles.postContainer, { justifyContent: 'center', alignItems: 'center', padding: 40 }]}>
+                                <Home color={COLORS.textSecondary} size={64} />
+                                <Text style={[styles.username, { marginTop: 20, textAlign: 'center' }]}>
+                                    {activeTab === 'Following' ? 'No videos from people you follow' : 'No videos yet'}
+                                </Text>
+                                <Text style={[styles.caption, { textAlign: 'center', marginTop: 8 }]}>
+                                    {activeTab === 'Following' 
+                                        ? 'Follow some ballers to see their content here!' 
+                                        : 'Be the first to post a video!'}
+                                </Text>
+                                <TouchableOpacity
+                                    style={[styles.challengeBtn, { marginTop: 20 }]}
+                                    onPress={() => navigation.navigate('Upload')}
+                                >
+                                    <Camera color={COLORS.background} size={20} />
+                                    <Text style={styles.challengeBtnText}>CREATE VIDEO</Text>
+                                </TouchableOpacity>
+                            </View>
+                        ) : null
                     }
                 />
 
@@ -1090,7 +1188,6 @@ const HomeFeedScreen = () => {
 
                         <View style={styles.threadControls}>
                             <TouchableOpacity style={styles.autoScrollBtn}>
-                                <ArrowRight color={COLORS.primary} size={16} />
                                 <Text style={styles.autoScrollText}>Thread Auto-Scroll ON</Text>
                             </TouchableOpacity>
                         </View>
@@ -1133,9 +1230,6 @@ const HomeFeedScreen = () => {
                                     </View>
                                     <View style={styles.threadVideoPlaceholder}>
                                         <Image source={{ uri: item.thumbnailUrl }} style={[StyleSheet.absoluteFill, { borderRadius: 15 }]} />
-                                        <View style={{ backgroundColor: 'rgba(0,0,0,0.5)', padding: 10, borderRadius: 20 }}>
-                                            <ArrowRight color={COLORS.white} size={24} />
-                                        </View>
                                         <Text style={styles.placeholderText}>Tap to play response</Text>
                                     </View>
                                     <Text style={styles.threadComment}>{item.caption}</Text>
