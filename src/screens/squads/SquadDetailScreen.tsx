@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Image, Alert, Modal, ActivityIndicator, FlatList, TextInput, Share } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Image, Alert, Modal, ActivityIndicator, FlatList, TextInput, Share, Switch } from 'react-native';
+import { launchImageLibrary } from 'react-native-image-picker';
 import { COLORS, SPACING, FONTS } from '../../constants/theme';
 import { ChevronLeft, MessageSquare, Trophy, Users, Plus, Share2, Settings, Lock, Check, X, ShieldCheck, Download, LogOut, Camera } from 'lucide-react-native';
 import squadService, { Squad } from '../../api/squadService';
@@ -39,6 +40,12 @@ const SquadDetailScreen = ({ navigation, route }: any) => {
     const [editDesc, setEditDesc] = useState('');
     const [editRules, setEditRules] = useState('');
     const [editPrice, setEditPrice] = useState('');
+    const [editIsPrivate, setEditIsPrivate] = useState(false);
+    const [editCapacity, setEditCapacity] = useState('50');
+    const [editKudosCost, setEditKudosCost] = useState('0');
+    const [editAgeRestriction, setEditAgeRestriction] = useState<'all' | '13+' | '18+'>('all');
+    const [editImageUri, setEditImageUri] = useState<string | null>(null);
+    const [updating, setUpdating] = useState(false);
 
     useEffect(() => {
         loadUserProfile();
@@ -49,7 +56,18 @@ const SquadDetailScreen = ({ navigation, route }: any) => {
                 setEditDesc(updatedSquad.description);
                 setEditRules(updatedSquad.rules || '');
                 setEditPrice(updatedSquad.price || '');
+                setEditIsPrivate(updatedSquad.isPrivate || false);
+                setEditCapacity(String(updatedSquad.capacity || 50));
+                setEditKudosCost(String(updatedSquad.kudosCost || 0));
+                setEditAgeRestriction(updatedSquad.ageRestriction || 'all');
                 checkPermissions(updatedSquad);
+
+                // Auto-open admin modal if requested via navigation params
+                if (route.params?.autoOpenAdmin && updatedSquad.creatorId === firebaseAuth.currentUser?.uid) {
+                    setShowAdminModal(true);
+                    // Clear the param so it doesn't re-open on every snapshot
+                    navigation.setParams({ autoOpenAdmin: false });
+                }
             }
         });
         loadPosts();
@@ -178,17 +196,43 @@ const SquadDetailScreen = ({ navigation, route }: any) => {
     };
 
     const handleUpdateSquad = async () => {
+        if (!editName.trim()) {
+            Alert.alert('Error', 'Squad name is required.');
+            return;
+        }
+
+        setUpdating(true);
         try {
             await squadService.updateSquad(squadId, {
                 name: editName,
                 description: editDesc,
                 rules: editRules,
-                price: editPrice
+                price: editPrice,
+                isPrivate: editIsPrivate,
+                capacity: parseInt(editCapacity) || 50,
+                kudosCost: parseInt(editKudosCost) || 0,
+                ageRestriction: editAgeRestriction,
+                imageUri: editImageUri || undefined
             });
             setShowAdminModal(false);
-            Alert.alert('Success', 'Squad updated.');
+            setEditImageUri(null);
+            Alert.alert('Success', 'Squad updated successfully.');
         } catch (error) {
-            Alert.alert('Error', 'Update failed.');
+            console.error(error);
+            Alert.alert('Error', 'Update failed. Please try again.');
+        } finally {
+            setUpdating(false);
+        }
+    };
+
+    const pickImage = async () => {
+        const result = await launchImageLibrary({
+            mediaType: 'photo',
+            quality: 0.8,
+        });
+
+        if (result.assets && result.assets.length > 0) {
+            setEditImageUri(result.assets[0].uri || null);
         }
     };
 
@@ -197,6 +241,18 @@ const SquadDetailScreen = ({ navigation, route }: any) => {
             <View style={styles.bannerContainer}>
                 <Image source={{ uri: squad?.image || 'https://via.placeholder.com/800x400' }} style={styles.banner} />
                 <View style={styles.overlay} />
+
+                {/* Welcome Video Placeholder */}
+                <View style={styles.welcomeVideoContainer}>
+                    <TouchableOpacity
+                        style={styles.welcomeVideoPlay}
+                        onPress={() => Alert.alert('Welcome Video', 'Video player will open here')}
+                    >
+                        <MessageSquare color={COLORS.white} size={32} />
+                        <Text style={styles.welcomeVideoText}>Welcome & Rules</Text>
+                    </TouchableOpacity>
+                </View>
+
                 <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
                     <ChevronLeft color={COLORS.white} size={24} />
                 </TouchableOpacity>
@@ -249,10 +305,17 @@ const SquadDetailScreen = ({ navigation, route }: any) => {
                     </TouchableOpacity>
                 ) : (
                     <View style={styles.actionRow}>
-                        <TouchableOpacity style={[styles.actionBtn, { flex: 2 }]} onPress={() => navigation.navigate('MainTabs', { screen: 'Upload', params: { squadId } })}>
-                            <Plus size={20} color={COLORS.background} />
-                            <Text style={styles.actionBtnText}>Post to Squad</Text>
-                        </TouchableOpacity>
+                        {isAdmin ? (
+                            <TouchableOpacity style={[styles.actionBtn, { flex: 2 }]} onPress={() => setShowCreateChallenge(true)}>
+                                <Plus size={20} color={COLORS.background} />
+                                <Text style={styles.actionBtnText}>Post Challenge</Text>
+                            </TouchableOpacity>
+                        ) : (
+                            <View style={[styles.actionBtn, { flex: 2, backgroundColor: COLORS.surface }]}>
+                                <Users size={20} color={COLORS.textSecondary} />
+                                <Text style={[styles.actionBtnText, { color: COLORS.textSecondary }]}>Squad Member</Text>
+                            </View>
+                        )}
                         <TouchableOpacity style={styles.secondaryActionBtn} onPress={handleShare}>
                             <Share2 size={20} color={COLORS.white} />
                         </TouchableOpacity>
@@ -349,6 +412,18 @@ const SquadDetailScreen = ({ navigation, route }: any) => {
                             </View>
                         </View>
                         <Text style={styles.challengeDesc}>{item.description}</Text>
+                        <TouchableOpacity
+                            style={styles.joinChallengeBtn}
+                            onPress={() => navigation.navigate('Upload', {
+                                squadId,
+                                challengeId: item.id,
+                                isResponse: true,
+                                challengeTitle: item.title
+                            })}
+                        >
+                            <Trophy size={16} color={COLORS.background} />
+                            <Text style={styles.joinChallengeText}>Join Challenge</Text>
+                        </TouchableOpacity>
                     </View>
                 )) : (
                     <View style={styles.emptyState}>
@@ -409,10 +484,20 @@ const SquadDetailScreen = ({ navigation, route }: any) => {
                     <ScrollView style={styles.modalForm}>
                         <TouchableOpacity
                             style={styles.imageEditBtn}
-                            onPress={() => Alert.alert('Pick Image', 'Image picker will open here.')}
+                            onPress={pickImage}
                         >
-                            <Camera color={COLORS.primary} size={32} />
-                            <Text style={styles.imageEditBtnText}>Change Squad Picture</Text>
+                            {editImageUri || squad?.image ? (
+                                <Image
+                                    source={{ uri: editImageUri || squad?.image }}
+                                    style={styles.editPreviewImage}
+                                />
+                            ) : (
+                                <Camera color={COLORS.primary} size={32} />
+                            )}
+                            <View style={styles.imageOverlay}>
+                                <Camera color={COLORS.white} size={24} />
+                                <Text style={styles.imageEditBtnText}>Change Squad Picture</Text>
+                            </View>
                         </TouchableOpacity>
 
                         <Text style={styles.label}>Squad Name</Text>
@@ -445,8 +530,74 @@ const SquadDetailScreen = ({ navigation, route }: any) => {
                             placeholderTextColor={COLORS.textSecondary}
                         />
 
-                        <TouchableOpacity style={styles.saveBtn} onPress={handleUpdateSquad}>
-                            <Text style={styles.saveBtnText}>Save Changes</Text>
+                        <View style={styles.settingRow}>
+                            <View>
+                                <Text style={styles.settingTitle}>Private Squad</Text>
+                                <Text style={styles.settingDesc}>Invite only via code</Text>
+                            </View>
+                            <Switch
+                                value={editIsPrivate}
+                                onValueChange={setEditIsPrivate}
+                                trackColor={{ false: COLORS.surface, true: COLORS.primary }}
+                                thumbColor={COLORS.white}
+                            />
+                        </View>
+
+                        <View style={styles.settingRow}>
+                            <View>
+                                <Text style={styles.settingTitle}>Entry Fee (Kudos)</Text>
+                                <Text style={styles.settingDesc}>Points required to join</Text>
+                            </View>
+                            <TextInput
+                                style={styles.smallInput}
+                                value={editKudosCost}
+                                onChangeText={setEditKudosCost}
+                                keyboardType="numeric"
+                            />
+                        </View>
+
+                        <View style={styles.settingRow}>
+                            <View>
+                                <Text style={styles.settingTitle}>Member Capacity</Text>
+                                <Text style={styles.settingDesc}>Max members allowed</Text>
+                            </View>
+                            <TextInput
+                                style={styles.smallInput}
+                                value={editCapacity}
+                                onChangeText={setEditCapacity}
+                                keyboardType="numeric"
+                            />
+                        </View>
+
+                        <Text style={styles.label}>Age Restriction</Text>
+                        <View style={styles.ageRestrictionContainer}>
+                            {['all', '13+', '18+'].map((tier) => (
+                                <TouchableOpacity
+                                    key={tier}
+                                    style={[
+                                        styles.ageRestrictionBtn,
+                                        editAgeRestriction === tier && styles.ageRestrictionBtnActive
+                                    ]}
+                                    onPress={() => setEditAgeRestriction(tier as any)}
+                                >
+                                    <Text style={[
+                                        styles.ageRestrictionText,
+                                        editAgeRestriction === tier && styles.ageRestrictionTextActive
+                                    ]}>{tier.toUpperCase()}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+
+                        <TouchableOpacity
+                            style={[styles.saveBtn, updating && { opacity: 0.7 }]}
+                            onPress={handleUpdateSquad}
+                            disabled={updating}
+                        >
+                            {updating ? (
+                                <ActivityIndicator color={COLORS.background} />
+                            ) : (
+                                <Text style={styles.saveBtnText}>Save Changes</Text>
+                            )}
                         </TouchableOpacity>
                     </ScrollView>
                 </SafeAreaView>
@@ -798,7 +949,46 @@ const styles = StyleSheet.create({
     },
     avatarText: {
         color: COLORS.primary,
+        fontSize: 18,
         fontFamily: FONTS.display.bold,
+    },
+    welcomeVideoContainer: {
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        transform: [{ translateX: -80 }, { translateY: -40 }],
+        width: 160,
+        height: 80,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.3)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    welcomeVideoPlay: {
+        alignItems: 'center',
+        gap: 4,
+    },
+    welcomeVideoText: {
+        color: COLORS.white,
+        fontSize: 12,
+        fontFamily: FONTS.display.bold,
+    },
+    joinChallengeBtn: {
+        backgroundColor: COLORS.primary,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        paddingVertical: 10,
+        borderRadius: 12,
+        marginTop: 12,
+    },
+    joinChallengeText: {
+        color: COLORS.background,
+        fontFamily: FONTS.display.bold,
+        fontSize: 14,
     },
     memberInfo: {
         flex: 1,
@@ -922,6 +1112,74 @@ const styles = StyleSheet.create({
         color: COLORS.background,
         fontSize: 18,
         fontFamily: FONTS.display.bold,
+    },
+    editPreviewImage: {
+        width: '100%',
+        height: 180,
+        borderRadius: 16,
+    },
+    imageOverlay: {
+        position: 'absolute',
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        width: '100%',
+        height: '100%',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 16,
+    },
+    settingRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: COLORS.surface,
+        padding: 16,
+        borderRadius: 12,
+        marginTop: 12,
+    },
+    settingTitle: {
+        color: COLORS.white,
+        fontFamily: FONTS.display.semiBold,
+        fontSize: 15,
+    },
+    settingDesc: {
+        color: COLORS.textSecondary,
+        fontFamily: FONTS.body.regular,
+        fontSize: 12,
+    },
+    smallInput: {
+        backgroundColor: COLORS.background,
+        color: COLORS.white,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 8,
+        minWidth: 60,
+        textAlign: 'right',
+        fontFamily: FONTS.body.bold,
+    },
+    ageRestrictionContainer: {
+        flexDirection: 'row',
+        gap: 12,
+        marginTop: 8,
+    },
+    ageRestrictionBtn: {
+        flex: 1,
+        backgroundColor: COLORS.surface,
+        paddingVertical: 12,
+        alignItems: 'center',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'transparent',
+    },
+    ageRestrictionBtnActive: {
+        borderColor: COLORS.primary,
+        backgroundColor: 'rgba(143, 251, 185, 0.1)',
+    },
+    ageRestrictionText: {
+        color: COLORS.textSecondary,
+        fontFamily: FONTS.display.bold,
+    },
+    ageRestrictionTextActive: {
+        color: COLORS.primary,
     },
     paywallOverlay: {
         flex: 1,

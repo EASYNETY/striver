@@ -7,6 +7,7 @@ import {
     setDoc,
     updateDoc,
     deleteDoc,
+    addDoc,
     query,
     where,
     limit,
@@ -170,6 +171,24 @@ export const RewardService = {
         }
     },
 
+    async deductCoins(userId: string, amount: number, reason: string) {
+        const userDocRef = doc(modularDb, 'users', userId);
+
+        await updateDoc(userDocRef, {
+            coins: increment(-amount)
+        });
+
+        await addDoc(collection(modularDb, 'transactions'), {
+            userId,
+            type: 'spend',
+            actionType: 'squad_join_fee',
+            amount,
+            timestamp: serverTimestamp(),
+            dateString: new Date().toISOString().split('T')[0],
+            metadata: { reason }
+        });
+    },
+
     async spendCoins(userId: string, item: any) {
         const userDocRef = doc(modularDb, 'users', userId);
         const userSnap = await getDoc(userDocRef);
@@ -276,11 +295,5 @@ export const RewardService = {
         }
     }
 };
-
-// Helper to add documents since it's used frequently
-async function addDoc(colRef: any, data: any) {
-    const { addDoc: fbAddDoc } = require('@react-native-firebase/firestore');
-    return fbAddDoc(colRef, data);
-}
 
 export default RewardService;

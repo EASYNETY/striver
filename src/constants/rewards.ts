@@ -3,14 +3,14 @@
 // These represent the user's career level based on coins earned.
 export const CAREER_TIERS = [
     { id: 'future_star', name: 'Future Star', color: '#A8F6BD', threshold: 0, benefits: ['Digital Onboarding', 'Basic Frames'] },
-    { id: 'academy', name: 'Academy', color: '#7EEFD3', threshold: 100, benefits: ['Squad Invites', 'Bronze Badge Status'] },
-    { id: 'non_league', name: 'Non-League', color: '#7FD8F7', threshold: 300, benefits: ['Comment on Videos', 'Silver Badge Status'] },
+    { id: 'academy', name: 'Academy', color: '#7EEFD3', threshold: 100, benefits: ['Squad Invites', 'Bronze Status'] },
+    { id: 'non_league', name: 'Non-League', color: '#7FD8F7', threshold: 300, benefits: ['Comment on Videos', 'Silver Status'] },
     { id: 'baller', name: 'Baller', color: '#C7A8FF', threshold: 600, benefits: ['Custom Profile Links', 'Premium Frames'] },
-    { id: 'pro', name: 'Pro', color: '#FFA8BF', threshold: 1200, benefits: ['Unlimited Squads', 'Gold Badge Status'] },
+    { id: 'challenger', name: 'Challenger', color: '#FFA8BF', threshold: 1200, benefits: ['Unlimited Squads', 'Gold Status'] },
     { id: 'elite', name: 'Elite', color: '#FFB4A8', threshold: 2500, benefits: ['Early Access Features', 'Verified Checkmark (Blue)'] },
-    { id: 'world_class', name: 'World Class', color: '#FFC79A', threshold: 5000, benefits: ['Platinum Badge Status', 'Direct Legend Access'] },
+    { id: 'world_class', name: 'World Class', color: '#FFC79A', threshold: 5000, benefits: ['Platinum Status', 'Direct Legend Access'] },
     { id: 'icon', name: 'Icon', color: '#FFF5A8', threshold: 10000, benefits: ['VIP Event Invites', 'Exclusive Merchandise'] },
-    { id: 'legend', name: 'Legend', color: '#DDE2E8', threshold: 20000, benefits: ['Diamond Badge Status', 'In-App Mentorship'] },
+    { id: 'legend', name: 'Legend', color: '#DDE2E8', threshold: 20000, benefits: ['Diamond Status', 'In-App Mentorship'] },
     { id: 'goat', name: 'GOAT', color: '#F7E9A0', threshold: 50000, benefits: ['Hall of Fame Profile', 'All-Access Pass'] },
 ];
 
@@ -19,7 +19,7 @@ export const CAREER_TIERS = [
 export const BADGE_TIERS = [
     { id: 'bronze', name: 'Bronze', color: '#cd7f32', tierRange: ['future_star', 'academy'] },
     { id: 'silver', name: 'Silver', color: '#c0c0c0', tierRange: ['non_league', 'baller'] },
-    { id: 'gold', name: 'Gold', color: '#ffd700', tierRange: ['pro', 'elite'] },
+    { id: 'gold', name: 'Gold', color: '#ffd700', tierRange: ['challenger', 'elite'] },
     { id: 'platinum', name: 'Platinum', color: '#e5e4e2', tierRange: ['world_class', 'icon'] },
     { id: 'diamond', name: 'Diamond', color: '#b9f2ff', tierRange: ['legend', 'goat'] },
 ];

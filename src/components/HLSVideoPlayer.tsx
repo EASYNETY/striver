@@ -39,7 +39,7 @@ export const HLSVideoPlayer: React.FC<HLSVideoPlayerProps> = ({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [showControls, setShowControls] = useState(false);
-  const videoRef = useRef<Video>(null);
+  const videoRef = useRef<any>(null);
   const controlsOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -111,8 +111,8 @@ export const HLSVideoPlayer: React.FC<HLSVideoPlayerProps> = ({
 
   return (
     <View style={[styles.container, style]}>
-      <TouchableOpacity 
-        style={StyleSheet.absoluteFill} 
+      <TouchableOpacity
+        style={StyleSheet.absoluteFill}
         activeOpacity={1}
         onPress={toggleControls}
       >
@@ -133,6 +133,13 @@ export const HLSVideoPlayer: React.FC<HLSVideoPlayerProps> = ({
 
       {loading && (
         <View style={styles.loadingContainer}>
+          {thumbnail && (
+            <Animated.Image
+              source={{ uri: thumbnail }}
+              style={[StyleSheet.absoluteFill, { opacity: loading ? 0.7 : 0 }]}
+              resizeMode="cover"
+            />
+          )}
           <ActivityIndicator size="large" color="#8FFBB9" />
           <Text style={styles.loadingText}>Loading video...</Text>
         </View>
@@ -155,9 +162,9 @@ export const HLSVideoPlayer: React.FC<HLSVideoPlayerProps> = ({
       )}
 
       {/* Progress Bar and Controls */}
-      <Animated.View 
+      <Animated.View
         style={[
-          styles.controlsContainer, 
+          styles.controlsContainer,
           { opacity: controlsOpacity }
         ]}
         pointerEvents={showControls || hasEnded ? 'auto' : 'none'}
@@ -165,11 +172,11 @@ export const HLSVideoPlayer: React.FC<HLSVideoPlayerProps> = ({
         {/* Progress Bar */}
         <View style={styles.progressBarContainer}>
           <View style={styles.progressBarBackground}>
-            <View 
+            <View
               style={[
-                styles.progressBarFill, 
+                styles.progressBarFill,
                 { width: `${progressPercentage}%` }
-              ]} 
+              ]}
             />
           </View>
           <View style={styles.timeContainer}>

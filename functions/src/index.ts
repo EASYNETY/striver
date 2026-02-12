@@ -13,5 +13,6 @@ export {
     onPostCommented,
     onNewFollower,
     onVideoResponse,
-    onChallengeInvite
+    onChallengeInvite,
+    onUserNotificationCreated
 } from './notifications-simple';

@@ -15,7 +15,7 @@ STEP 2: INSTALL APK
 Once build completes, run:
 
     ./install-apk-now.bat
-
+ 
 
 STEP 3: TEST
 ------------

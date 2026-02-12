@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
-import { httpsCallable } from '@react-native-firebase/functions';
-import { collection, addDoc, serverTimestamp } from '@react-native-firebase/firestore';
-import { firebaseAuth, cloudFunctions, db } from '../api/firebase';
+import functions from '@react-native-firebase/functions';
+import firestore from '@react-native-firebase/firestore';
+import { firebaseAuth, db } from '../api/firebase';
 
 interface VerificationResult {
     success: boolean;
@@ -31,7 +31,7 @@ export const useAgeVerification = () => {
             }
 
             try {
-                const verifyAgeFn = httpsCallable(cloudFunctions, 'verifyAge');
+                const verifyAgeFn = functions().httpsCallable('verifyAge');
                 const result = await verifyAgeFn({
                     dateOfBirth,
                     method: 'ondato'
@@ -65,10 +65,9 @@ export const useAgeVerification = () => {
             const extRef = `ondato_${uid}_${Date.now()}`;
             const directUrl = `https://idv.ondato.com/setups/${ONDATO_SETUP_ID}?externalRef=${extRef}`;
 
-            // Store attempt in Firestore using MODULAR API
+            // Store attempt in Firestore using compat API
             try {
-                // Use addDoc and collection for modular API compliance
-                await addDoc(collection(db, 'verification_attempts'), {
+                await db.collection('verification_attempts').add({
                     userId: uid,
                     externalReferenceId: extRef,
                     sessionId: extRef, // Unify with sessionId for status checks
@@ -76,7 +75,7 @@ export const useAgeVerification = () => {
                     status: 'pending',
                     verificationUrl: directUrl,
                     dateOfBirth: dob,
-                    createdAt: serverTimestamp(),
+                    createdAt: firestore.FieldValue.serverTimestamp(),
                     isDirectFallback: true
                 });
             } catch (fe) {

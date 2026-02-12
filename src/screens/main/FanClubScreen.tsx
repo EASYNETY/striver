@@ -4,12 +4,10 @@ import { COLORS, SPACING } from '../../constants/theme';
 import { HeartHandshake, Star, Users, Crown, ChevronRight, MessageSquare, Trophy, GraduationCap } from 'lucide-react-native';
 import { firebaseAuth } from '../../api/firebase';
 import userService, { UserProfile } from '../../api/userService';
-import paymentService from '../../api/paymentService';
 import { Alert, ActivityIndicator } from 'react-native';
 
 const FanClubScreen = ({ navigation }: any) => {
     const [profile, setProfile] = useState<UserProfile | null>(null);
-    const [paying, setPaying] = useState(false);
 
     useEffect(() => {
         const currentUid = firebaseAuth.currentUser?.uid;
@@ -18,26 +16,8 @@ const FanClubScreen = ({ navigation }: any) => {
         }
     }, []);
 
-    const handleUpgrade = async () => {
-        try {
-            setPaying(true);
-            // In real app, priceId would come from Stripe Dashboard
-            // For demo, we use amount-based payment
-            await paymentService.initializePaymentSheet(999, 'gbp', 'Striver Pro Monthly Subscription');
-            const success = await paymentService.openPaymentSheet();
-
-            if (success) {
-                Alert.alert('Welcome to Pro!', 'Your account has been upgraded. You now have the Pro Badge and 2x Coins enabled.');
-                // In production, backend webhook would update firestore. 
-                // Here we optimistically update UI if we want, or rely on profile listener.
-            }
-        } catch (error: any) {
-            if (error.message !== 'The user cancelled the payment sheet') {
-                Alert.alert('Payment Error', error.message);
-            }
-        } finally {
-            setPaying(false);
-        }
+    const handleUpgrade = () => {
+        Alert.alert('Coming Soon', 'The Fan Club is currently being upgraded. Check back later!');
     };
 
     const handleBenefitPress = (id: string) => {
@@ -46,8 +26,7 @@ const FanClubScreen = ({ navigation }: any) => {
                 navigation.navigate('SquadsTab', { premiumOnly: true });
                 break;
             case '2': // Mentor Connect
-                // Navigate to mentor/coaching section (to be implemented)
-                Alert.alert('Mentor Connect', 'Connect with verified coaches and mentors to improve your skills. Coming soon!');
+                navigation.navigate('Mentors');
                 break;
             case '3': // Exclusive Rewards
                 navigation.navigate('Rewards');
@@ -87,26 +66,12 @@ const FanClubScreen = ({ navigation }: any) => {
             </View>
 
             <ScrollView contentContainerStyle={styles.content}>
-                <View style={styles.heroCard}>
+                <View style={[styles.heroCard, { backgroundColor: '#2A1A40', height: 120 }]}>
                     <View style={styles.heroText}>
-                        <Text style={styles.heroTitle}>Upgrade to Pro</Text>
-                        <Text style={styles.heroSubtitle}>Unlock all premium features and get verified.</Text>
-                        <TouchableOpacity
-                            style={[styles.heroBtn, paying && { opacity: 0.7 }]}
-                            onPress={handleUpgrade}
-                            disabled={paying}
-                        >
-                            {paying ? (
-                                <ActivityIndicator size="small" color={COLORS.background} />
-                            ) : (
-                                <Text style={styles.heroBtnText}>Upgrade Now</Text>
-                            )}
-                        </TouchableOpacity>
+                        <Text style={styles.heroTitle}>Striver Fan Club</Text>
+                        <Text style={styles.heroSubtitle}>Be part of the exclusive loop of top rising stars.</Text>
                     </View>
-                    <Image
-                        source={{ uri: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=400' }}
-                        style={styles.heroImage}
-                    />
+                    <Crown color="#FFD700" size={60} style={{ position: 'absolute', right: 20, top: 30, opacity: 0.2 }} />
                 </View>
 
                 <Text style={styles.sectionTitle}>Exclusive Benefits</Text>
@@ -133,8 +98,8 @@ const FanClubScreen = ({ navigation }: any) => {
                             <Text style={styles.perkText}>2x Coins</Text>
                         </View>
                         <View style={styles.perkItem}>
-                            <MessageSquare color={COLORS.primary} size={20} fill={COLORS.primary} />
-                            <Text style={styles.perkText}>Pro Badge</Text>
+                            <Trophy color={COLORS.primary} size={20} fill={COLORS.primary} />
+                            <Text style={styles.perkText}>Fan Events</Text>
                         </View>
                     </View>
                 </View>
@@ -151,7 +116,9 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: SPACING.md,
+        paddingHorizontal: SPACING.md,
+        paddingTop: 80,
+        paddingBottom: SPACING.md,
         gap: 12,
     },
     headerTitle: {

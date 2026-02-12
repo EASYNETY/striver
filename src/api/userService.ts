@@ -178,6 +178,8 @@ class UserService {
             },
             (error) => {
                 console.error("Error listening to profile:", error, "for uid:", uid);
+                // CRUCIAL: Call callback with null on error so the app doesn't hang on splash
+                callback(null);
             }
         );
     }

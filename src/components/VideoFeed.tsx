@@ -42,50 +42,23 @@ const VideoFeed = ({
     // Update local posts when props change
     useEffect(() => {
         setLocalPosts(posts);
+        if (posts.length > 0) {
+            updateInteractionState(visibleItemIndex);
+        }
     }, [posts]);
 
-    // Initialize local state from props
-    useEffect(() => {
-        checkInteractions();
-        
-        // Set up real-time listener for post updates
-        const unsubscribers: (() => void)[] = [];
-        
-        localPosts.forEach(post => {
-            const unsubscribe = postService.subscribeToPostUpdates(post.id, (updatedPost) => {
-                if (updatedPost) {
-                    setLocalPosts(prev => prev.map(p => p.id === updatedPost.id ? updatedPost : p));
-                }
-            });
-            if (unsubscribe) unsubscribers.push(unsubscribe);
-        });
-        
-        return () => {
-            unsubscribers.forEach(unsub => unsub());
-        };
-    }, [localPosts.length]); // Only re-subscribe when number of posts changes
-
-    const checkInteractions = async () => {
+    const updateInteractionState = async (index: number) => {
         const currentUser = firebaseAuth.currentUser;
-        if (!currentUser || localPosts.length === 0) return;
+        if (!currentUser || !localPosts[index]) return;
 
-        // Check which posts the user has liked
-        const likedPostIds = new Set<string>();
-        const followingUserIds = new Set<string>();
-        
-        // Check likes and follows in parallel
-        await Promise.all(localPosts.map(async (post) => {
-            const [isLiked, isFollowing] = await Promise.all([
-                postService.hasLikedPost(post.id),
-                post.userId !== currentUser.uid ? userService.isFollowing(currentUser.uid, post.userId) : Promise.resolve(false)
-            ]);
-            
-            if (isLiked) likedPostIds.add(post.id);
-            if (isFollowing) followingUserIds.add(post.userId);
-        }));
-        
-        setLikedPosts(likedPostIds);
-        setFollowingIds(followingUserIds);
+        const post = localPosts[index];
+        const [isLiked, isFollowing] = await Promise.all([
+            postService.hasLikedPost(post.id),
+            post.userId !== currentUser.uid ? userService.isFollowing(currentUser.uid, post.userId) : Promise.resolve(false)
+        ]);
+
+        if (isLiked) setLikedPosts(prev => new Set(prev).add(post.id));
+        if (isFollowing) setFollowingIds(prev => new Set(prev).add(post.userId));
     };
 
     const handleLike = async (postId: string) => {
@@ -127,7 +100,6 @@ const VideoFeed = ({
             } else {
                 setFollowingIds(prev => new Set(prev).add(targetUserId));
                 await userService.followUser(currentUser.uid, targetUserId);
-                // Milestone trigger handled in userService
             }
         } catch (error) {
             console.error('Follow error:', error);
@@ -162,6 +134,7 @@ const VideoFeed = ({
         if (viewableItems.length > 0 && viewableItems[0].index !== null) {
             const index = viewableItems[0].index;
             setVisibleItemIndex(index);
+            updateInteractionState(index);
 
             // Clear existing timer
             if (viewTimerRef.current) {
@@ -172,7 +145,6 @@ const VideoFeed = ({
             viewTimerRef.current = setTimeout(() => {
                 const post = viewableItems[0].item as Post;
                 if (post) {
-                    // Only count if user actually watches for a bit
                     rewardService.updateTaskProgress('watch_5_videos', 1).catch(console.error);
                     postService.incrementViews(post.id).catch(console.error);
                 }
@@ -180,7 +152,6 @@ const VideoFeed = ({
         }
     }).current;
 
-    // Cleanup timer on unmount
     useEffect(() => {
         return () => {
             if (viewTimerRef.current) {
@@ -206,48 +177,50 @@ const VideoFeed = ({
     );
 
     return (
-        <FlatList
-            ref={flatListRef}
-            data={localPosts}
-            renderItem={renderItem}
-            keyExtractor={item => item.id}
-            pagingEnabled
-            showsVerticalScrollIndicator={false}
-            snapToInterval={height}
-            snapToAlignment="start"
-            decelerationRate="fast"
-            viewabilityConfig={{
-                itemVisiblePercentThreshold: 50
-            }}
-            onViewableItemsChanged={onViewableItemsChanged}
-            initialScrollIndex={initialScrollIndex}
-            onScrollToIndexFailed={info => {
-                const wait = new Promise(resolve => setTimeout(resolve, 500));
-                wait.then(() => {
-                    flatListRef.current?.scrollToIndex({ index: info.index, animated: false });
-                });
-            }}
-            getItemLayout={(data, index) => (
-                { length: height, offset: height * index, index }
-            )}
-            onRefresh={onRefresh}
-            refreshing={refreshing}
-            onEndReached={onEndReached}
-            onEndReachedThreshold={0.5}
-            ListEmptyComponent={ListEmptyComponent}
-            style={styles.list}
-            removeClippedSubviews={true} // Critical for memory
-            windowSize={3} // Optimize memory usage
-            initialNumToRender={1} // Speed up initial load
-            maxToRenderPerBatch={1} // Reduce JS thread blocking
-        />
+        <View style={{ flex: 1 }}>
+            <FlatList
+                ref={flatListRef}
+                data={localPosts}
+                renderItem={renderItem}
+                keyExtractor={item => item.id}
+                pagingEnabled
+                showsVerticalScrollIndicator={false}
+                snapToInterval={height}
+                snapToAlignment="start"
+                decelerationRate="fast"
+                viewabilityConfig={{
+                    itemVisiblePercentThreshold: 50
+                }}
+                onViewableItemsChanged={onViewableItemsChanged}
+                initialScrollIndex={initialScrollIndex}
+                onScrollToIndexFailed={info => {
+                    const wait = new Promise(resolve => setTimeout(resolve, 500));
+                    wait.then(() => {
+                        flatListRef.current?.scrollToIndex({ index: info.index, animated: false });
+                    });
+                }}
+                getItemLayout={(data, index) => (
+                    { length: height, offset: height * index, index }
+                )}
+                onRefresh={onRefresh}
+                refreshing={refreshing}
+                onEndReached={onEndReached}
+                onEndReachedThreshold={0.5}
+                ListEmptyComponent={ListEmptyComponent}
+                style={styles.list}
+                removeClippedSubviews={true}
+                windowSize={3}
+                initialNumToRender={1}
+                maxToRenderPerBatch={1}
+            />
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
     list: {
         flex: 1,
-        backgroundColor: COLORS.background,
+        backgroundColor: '#000',
     }
 });
 

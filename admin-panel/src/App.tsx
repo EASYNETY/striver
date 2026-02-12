@@ -46,7 +46,9 @@ import {
   X,
   UserCheck,
   RefreshCw,
-  WifiOff
+  WifiOff,
+  Award,
+  GraduationCap
 } from 'lucide-react';
 import {
   AreaChart,
@@ -58,6 +60,7 @@ import {
   ResponsiveContainer
 } from 'recharts';
 import Login from './Login';
+import MentorsManagement from './MentorsManagement';
 
 /**
  * Robust Function Caller with resilience against CORS/404 
@@ -118,6 +121,7 @@ const App: React.FC = () => {
   const [allPosts, setAllPosts] = useState<any[]>([]);
   const [squads, setSquads] = useState<any[]>([]);
   const [verificationQueue, setVerificationQueue] = useState<any[]>([]);
+  const [squadWaitlist, setSquadWaitlist] = useState<any[]>([]);
   const [systemLogs, setSystemLogs] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
 
@@ -211,6 +215,22 @@ const App: React.FC = () => {
       (err) => console.error("Verify sync failed:", err)
     );
 
+    // 3.5 Squad Creation Waitlist
+    // 3.5 Squad Creation Waitlist
+    const unsubWaitlist = onSnapshot(
+      // query(collection(db, 'squad_creation_waitlist'), orderBy('requestedAt', 'desc'), limit(100)),
+      query(collection(db, 'squad_creation_waitlist'), limit(100)), // Simplified query for debugging
+      (snap) => {
+        console.log("Waitlist snap size:", snap.size);
+        setSquadWaitlist(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      },
+      (err) => {
+        console.error("Waitlist sync failed detailed:", err);
+        console.error("Waitlist sync error code:", err.code);
+        console.error("Waitlist sync error message:", err.message);
+      }
+    );
+
     // 4. Kernel Event Log
     const unsubLogs = onSnapshot(
       query(collection(db, 'admin_logs'), orderBy('timestamp', 'desc'), limit(30)),
@@ -255,7 +275,7 @@ const App: React.FC = () => {
     });
 
     return () => {
-      unsubUsers(); unsubPosts(); unsubSquads(); unsubVerify(); unsubLogs(); unsubConfig();
+      unsubUsers(); unsubPosts(); unsubSquads(); unsubVerify(); unsubWaitlist(); unsubLogs(); unsubConfig();
       clearInterval(statsTimer);
     };
   }, [user, usersPage, postsPage]);
@@ -417,6 +437,59 @@ const App: React.FC = () => {
     }
   };
 
+  const handleWaitlistAction = async (requestId: string, action: 'approve' | 'reject', userId: string) => {
+    const note = window.prompt(
+      `${action.toUpperCase()} SQUAD CREATION REQUEST`,
+      action === 'approve' ? 'Request approved. User can now create squads.' : 'Request denied. Please provide reason.'
+    );
+    if (note === null) return;
+
+    try {
+      await updateDoc(doc(db, 'squad_creation_waitlist', requestId), {
+        status: action === 'approve' ? 'approved' : 'rejected',
+        adminNotes: note,
+        processedAt: serverTimestamp(),
+        processedBy: user.uid
+      });
+
+      // Notify user
+      await addDoc(collection(db, 'users', userId, 'notifications'), {
+        type: 'squad_waitlist',
+        title: action === 'approve' ? 'Squad Creation Approved!' : 'Squad Creation Request Update',
+        message: note,
+        read: false,
+        timestamp: serverTimestamp()
+      });
+
+      await addDoc(collection(db, 'admin_logs'), {
+        type: 'waitlist_action',
+        details: `Squad creation request ${requestId} ${action}ED for user ${userId}. Note: ${note}`,
+        timestamp: serverTimestamp()
+      });
+
+      alert(`Request ${action}ED successfully!`);
+    } catch (err: any) {
+      console.error(err);
+      alert('Action failed. Check console.');
+    }
+  };
+
+  const handleDeleteWaitlistRequest = async (requestId: string) => {
+    if (!window.confirm('DELETE this waitlist request permanently?')) return;
+    try {
+      await deleteDoc(doc(db, 'squad_creation_waitlist', requestId));
+      await addDoc(collection(db, 'admin_logs'), {
+        type: 'waitlist_deleted',
+        details: `Waitlist request ${requestId} deleted`,
+        timestamp: serverTimestamp()
+      });
+      alert('Request deleted successfully.');
+    } catch (err: any) {
+      console.error(err);
+      alert('Deletion failed.');
+    }
+  };
+
   if (authChecking) return <LoadingScreen />;
   if (!user) return <Login onLoginSuccess={(u) => setUser(u)} />;
 
@@ -459,6 +532,8 @@ const App: React.FC = () => {
           <NavItem icon={<Video size={22} />} label="Moderation" active={activeTab === 'videos'} onClick={() => setActiveTab('videos')} count={allPosts.filter(p => p.status === 'pending').length} />
           <NavItem icon={<ShieldCheck size={22} />} label="Registry" active={activeTab === 'registry'} onClick={() => setActiveTab('registry')} count={squads.length} />
           <NavItem icon={<UserCheck size={22} />} label="Identity" active={activeTab === 'verify'} onClick={() => setActiveTab('verify')} count={verificationQueue.length} />
+          <NavItem icon={<Award size={22} />} label="Waitlist" active={activeTab === 'waitlist'} onClick={() => setActiveTab('waitlist')} count={squadWaitlist.filter(w => w.status === 'pending').length} />
+          <NavItem icon={<GraduationCap size={22} />} label="Mentors" active={activeTab === 'mentors'} onClick={() => setActiveTab('mentors')} />
           <NavItem icon={<Activity size={22} />} label="Intelligence" active={activeTab === 'insights'} onClick={() => setActiveTab('insights')} />
           {(user?.role === 'super_admin' || user?.isMock) && (
             <NavItem icon={<Settings size={22} />} label="Settings" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
@@ -591,6 +666,8 @@ const App: React.FC = () => {
             )}
             {activeTab === 'registry' && <SquadsView squads={filteredSquads} onDelete={handleDeleteSquad} key="squads" />}
             {activeTab === 'verify' && <VerificationsView queue={verificationQueue} onAction={handleVerification} key="verifications" />}
+            {activeTab === 'waitlist' && <WaitlistView requests={squadWaitlist} onAction={handleWaitlistAction} onDelete={handleDeleteWaitlistRequest} key="waitlist" />}
+            {activeTab === 'mentors' && <MentorsManagement key="mentors" />}
             {activeTab === 'settings' && <SettingsView config={config} onUpdate={handleUpdateConfig} key="settings" />}
             {activeTab === 'insights' && <div className="space-y-8">
               <h3 className="text-4xl font-black italic uppercase tracking-tighter text-[#8FFBB9]">System Intelligence</h3>
@@ -809,6 +886,102 @@ const SquadsView = ({ squads, onDelete }: any) => (
     {!squads.length && <EmptyState title="Registry Empty" desc="No operational squads detected." icon={<ShieldCheck size={64} />} />}
   </div>
 );
+
+const WaitlistView = ({ requests, onAction, onDelete }: any) => {
+  console.log("WaitlistView rendering with requests:", requests.length);
+  const handleCreateTest = async () => {
+    try {
+      await addDoc(collection(db, 'squad_creation_waitlist'), {
+        userId: 'test-admin-' + Date.now(),
+        username: 'Test Admin',
+        email: 'admin@test.com',
+        requestedAt: serverTimestamp(),
+        status: 'pending',
+        reason: 'Debug test from admin panel',
+        adminNotes: ''
+      });
+      alert('Test request created!');
+    } catch (e) {
+      console.error("Test create failed:", e);
+      alert('Test create failed: ' + e);
+    }
+  };
+
+  return (
+    <div className="space-y-12 max-w-[1600px] mx-auto pb-40">
+      <div className="flex justify-between items-center">
+        <h3 className="text-4xl font-black italic uppercase tracking-tighter text-[#8FFBB9]">Squad Creation Waitlist <span className="text-white/20 ml-6">[{requests.length}]</span></h3>
+        <div className="flex gap-4">
+          <button onClick={handleCreateTest} className="px-6 py-3 bg-blue-500/10 border border-blue-500/20 rounded-xl text-[10px] font-black text-blue-400 uppercase tracking-widest hover:bg-blue-500 hover:text-white transition-all">
+            + TEST REQUEST
+          </button>
+          <div className="px-6 py-3 bg-orange-500/10 border border-orange-500/20 rounded-xl">
+            <span className="text-[10px] font-black text-orange-400 uppercase tracking-widest">Pending: {requests.filter((r: any) => r.status === 'pending').length}</span>
+          </div>
+          <div className="px-6 py-3 bg-green-500/10 border border-green-500/20 rounded-xl">
+            <span className="text-[10px] font-black text-green-400 uppercase tracking-widest">Approved: {requests.filter((r: any) => r.status === 'approved').length}</span>
+          </div>
+        </div>
+      </div>
+      <div className="glass-card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left min-w-[900px]">
+            <thead className="bg-white/[0.005]">
+              <tr className="text-white/20 text-[10px] font-black uppercase tracking-[0.4em]">
+                <th className="py-10 px-14">User</th>
+                <th className="py-10 px-6">Requested</th>
+                <th className="py-10 px-6">Status</th>
+                <th className="py-10 px-6">Reason</th>
+                <th className="py-10 px-14 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {requests.map((req: any) => (
+                <tr key={req.id} className="hover:bg-white/[0.02] transition-all group">
+                  <td className="py-8 px-14">
+                    <div className="flex items-center gap-6">
+                      <div className="w-12 h-12 rounded-xl border border-white/10 overflow-hidden bg-white/5 shrink-0">
+                        <img src={`https://ui-avatars.com/api/?name=${req.username}&background=0a1128&color=ffffff`} className="w-full h-full object-cover" alt="User" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-black text-lg italic uppercase tracking-tighter leading-none mb-2 truncate">{req.username}</p>
+                        <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest truncate">{req.email}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="py-8 px-6">
+                    <p className="text-xs text-white/40">{req.requestedAt?.toDate ? new Date(req.requestedAt.toDate()).toLocaleDateString() : 'N/A'}</p>
+                  </td>
+                  <td className="py-8 px-6">
+                    <div className={`inline-block px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border ${req.status === 'approved' ? 'border-green-500/40 text-green-400 bg-green-500/5' :
+                      req.status === 'rejected' ? 'border-red-500/40 text-red-400 bg-red-500/5' :
+                        'border-orange-500/40 text-orange-400 bg-orange-500/5'
+                      }`}>{req.status}</div>
+                  </td>
+                  <td className="py-8 px-6">
+                    <p className="text-xs text-white/40 line-clamp-2 max-w-xs">{req.reason || 'No reason provided'}</p>
+                  </td>
+                  <td className="py-8 px-14 text-right">
+                    <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-all">
+                      {req.status === 'pending' && (
+                        <>
+                          <button onClick={() => onAction(req.id, 'approve', req.userId)} className="px-5 py-3 rounded-xl bg-green-500/10 text-green-400 text-[8px] font-black uppercase hover:bg-green-500 hover:text-white transition-all border border-green-500/20">APPROVE</button>
+                          <button onClick={() => onAction(req.id, 'reject', req.userId)} className="px-5 py-3 rounded-xl bg-red-500/10 text-red-500 text-[8px] font-black uppercase hover:bg-red-500 hover:text-white transition-all border border-red-500/20">REJECT</button>
+                        </>
+                      )}
+                      <button onClick={() => onDelete(req.id)} className="px-5 py-3 rounded-xl bg-white/5 text-white/40 text-[8px] font-black uppercase hover:bg-red-500 hover:text-white transition-all border border-white/10">DELETE</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {!requests.length && <EmptyState title="Waitlist Empty" desc="No squad creation requests in queue." icon={<Award size={64} />} />}
+    </div>
+  );
+};
 
 const VerificationsView = ({ queue, onAction }: any) => (
   <div className="space-y-12 max-w-[1600px] mx-auto pb-40">

@@ -21,8 +21,10 @@ import PrivacySettingsScreen from '../screens/main/PrivacySettingsScreen';
 import LegalScreen from '../screens/main/LegalScreen';
 import SupportScreen from '../screens/main/SupportScreen';
 import FanClubScreen from '../screens/main/FanClubScreen';
+import MentorsScreen from '../screens/main/MentorsScreen';
 import AlertsScreen from '../screens/main/AlertsScreen';
 import FeedScreen from '../screens/main/FeedScreen';
+import ResponseThreadScreen from '../screens/main/ResponseThreadScreen';
 import userService from '../api/userService';
 import { firebaseAuth } from '../api/firebase';
 import { COLORS } from '../constants/theme';
@@ -133,7 +135,7 @@ const TabNavigator = () => {
                 }}
             />
             <Tab.Screen
-                name="Profile"
+                name="ProfileTab"
                 component={ProfileScreen}
                 options={{
                     tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
@@ -164,6 +166,8 @@ const MainNavigator = () => {
             <Stack.Screen name="Legal" component={LegalScreen} />
             <Stack.Screen name="Support" component={SupportScreen} />
             <Stack.Screen name="Feed" component={FeedScreen} />
+            <Stack.Screen name="ResponseThread" component={ResponseThreadScreen} />
+            <Stack.Screen name="Mentors" component={MentorsScreen} />
         </Stack.Navigator>
     );
 };

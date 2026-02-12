@@ -21,7 +21,7 @@ export class NotificationService {
         return enabled;
       } else {
         // Android 13+ requires POST_NOTIFICATIONS permission
-        if (Platform.Version >= 33) {
+        if (typeof Platform.Version === 'number' && Platform.Version >= 33) {
           const granted = await PermissionsAndroid.request(
             PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
           );

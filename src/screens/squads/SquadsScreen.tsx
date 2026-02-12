@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Image, TextInput, RefreshControl, Alert } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Image, TextInput, RefreshControl, Alert, Modal, Share, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, SPACING, FONTS } from '../../constants/theme';
-import { Search, Plus, Users, UserPlus, ShieldAlert } from 'lucide-react-native';
+import { Search, Plus, Users, UserPlus, ShieldAlert, ShieldCheck, Settings, Share2, X, CheckCircle, Clock, AlertTriangle } from 'lucide-react-native';
 import { useIsFocused } from '@react-navigation/native';
 import squadService, { Squad } from '../../api/squadService';
 import userService from '../../api/userService';
 import { firebaseAuth } from '../../api/firebase';
+import squadWaitlistService from '../../api/squadWaitlistService';
 import { DiagonalStreaksBackground } from '../../components/common/DiagonalStreaksBackground';
 
-const SquadsScreen = ({ navigation }: any) => {
+const SquadsScreen = ({ navigation, route }: any) => {
     const isFocused = useIsFocused();
     const [activeTab, setActiveTab] = useState('Explore');
     const [squads, setSquads] = useState<Squad[]>([]);
@@ -17,18 +19,44 @@ const SquadsScreen = ({ navigation }: any) => {
     const [inviteCode, setInviteCode] = useState('');
     const [userProfile, setUserProfile] = useState<any>(null);
 
-    const route = React.useRef(navigation.getState().routes.find((r: any) => r.name === 'SquadsTab')).current;
+    // REQUEST MODAL STATE
+    const [showRequestModal, setShowRequestModal] = useState(false);
+    const [requestStatus, setRequestStatus] = useState<'none' | 'pending' | 'approved' | 'rejected' | 'revoked' | 'success'>('none');
+    const [requestLoading, setRequestLoading] = useState(false);
+
+
+    // Initial check for deep link params
+    useEffect(() => {
+        if (route.params?.request === true) {
+            checkWaitlistStatus();
+            setShowRequestModal(true);
+            navigation.setParams({ request: undefined });
+        }
+    }, [route.params]);
 
     useEffect(() => {
         if (isFocused) {
-            const params = navigation.getState().routes.find((r: any) => r.name === 'SquadsTab')?.params;
+            const params = route.params;
             if (params?.initialTab) {
                 setActiveTab(params.initialTab);
             }
             loadUserProfile();
             loadSquads(params?.premiumOnly);
+            checkWaitlistStatus();
         }
-    }, [isFocused, activeTab]);
+    }, [isFocused, activeTab, route.params]);
+
+    const checkWaitlistStatus = async () => {
+        const currentUser = firebaseAuth.currentUser;
+        if (currentUser) {
+            const req = await squadWaitlistService.getUserRequest(currentUser.uid);
+            if (req) {
+                setRequestStatus(req.status as any);
+            } else {
+                setRequestStatus('none');
+            }
+        }
+    };
 
     const loadUserProfile = async () => {
         const currentUser = firebaseAuth.currentUser;
@@ -102,14 +130,80 @@ const SquadsScreen = ({ navigation }: any) => {
         navigation.navigate('SquadDetail', { squadId });
     };
 
+    const insets = useSafeAreaInsets();
+
+    const handleRequestPress = () => {
+        setShowRequestModal(true);
+    };
+
+    const handleJoinWaitlist = async () => {
+        setRequestLoading(true);
+        try {
+            const result = await squadWaitlistService.submitRequest();
+            if (result.success) {
+                setRequestStatus('success');
+                // Don't close modal immediately, let them see success
+            } else {
+                Alert.alert('Error', result.message);
+            }
+        } catch (error) {
+            console.error('[SquadsScreen] Request failed:', error);
+            Alert.alert('Error', 'Failed to join waitlist. Please try again.');
+        } finally {
+            setRequestLoading(false);
+        }
+    };
+
+    const handleRevokeRequest = async () => {
+        Alert.alert(
+            'Revoke Access',
+            'Are you sure you want to revoke your squad creation access/request? You will need to apply again.',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Revoke',
+                    style: 'destructive',
+                    onPress: async () => {
+                        setRequestLoading(true);
+                        const currentUser = firebaseAuth.currentUser;
+                        if (currentUser) {
+                            const result = await squadWaitlistService.cancelUserRequest(currentUser.uid);
+                            if (result.success) {
+                                setRequestStatus('none');
+                                Alert.alert('Success', 'Access revoked.');
+                                setShowRequestModal(false);
+                            } else {
+                                Alert.alert('Error', result.message);
+                            }
+                        }
+                        setRequestLoading(false);
+                    }
+                }
+            ]
+        );
+    };
+
+    const handleShareRequest = async () => {
+        const deepLink = 'https://striver-links.web.app/squads?request=true';
+        try {
+            await Share.share({
+                message: `Join the Striver Squad Creator Waitlist! Check it out here: ${deepLink}`,
+                url: deepLink, // iOS
+                title: 'Striver Squad Request'
+            });
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
     return (
-        <SafeAreaView style={styles.container}>
+        <View style={[styles.container, { paddingTop: insets.top }]}>
             <DiagonalStreaksBackground />
             <View style={styles.header}>
                 <Text style={styles.headerTitle}>Squads</Text>
-                <TouchableOpacity style={styles.createBtn} onPress={handleCreatePress}>
+                <TouchableOpacity style={styles.createBtn} onPress={handleRequestPress}>
                     <Plus color={COLORS.background} size={20} />
-                    <Text style={styles.createBtnText}>Create</Text>
+                    <Text style={styles.createBtnText}>Request</Text>
                 </TouchableOpacity>
             </View>
 
@@ -157,7 +251,8 @@ const SquadsScreen = ({ navigation }: any) => {
                 {squads.filter(canViewSquad).map(squad => {
                     const currentUser = firebaseAuth.currentUser;
                     const isMember = currentUser && squad.members?.includes(currentUser.uid);
-                    
+                    const isCreator = currentUser && squad.creatorId === currentUser.uid;
+
                     return (
                         <TouchableOpacity
                             key={squad.id}
@@ -171,6 +266,12 @@ const SquadsScreen = ({ navigation }: any) => {
                             <View style={styles.squadInfo}>
                                 <View style={styles.squadHeader}>
                                     <Text style={styles.squadName}>{squad.name}</Text>
+                                    {isCreator && (
+                                        <View style={styles.leaderBadge}>
+                                            <ShieldCheck color={COLORS.background} size={10} />
+                                            <Text style={styles.leaderBadgeText}>LEADER</Text>
+                                        </View>
+                                    )}
                                     {squad.ageRestriction && squad.ageRestriction !== 'all' && (
                                         <View style={styles.ageRestrictionBadge}>
                                             <ShieldAlert color={COLORS.background} size={10} />
@@ -186,8 +287,18 @@ const SquadsScreen = ({ navigation }: any) => {
                                     </View>
                                 </View>
                             </View>
-                            {!isMember && (
-                                <TouchableOpacity 
+                            {isCreator ? (
+                                <TouchableOpacity
+                                    style={styles.manageBtn}
+                                    onPress={(e) => {
+                                        e.stopPropagation();
+                                        navigation.navigate('SquadDetail', { squadId: squad.id, autoOpenAdmin: true });
+                                    }}
+                                >
+                                    <Settings color={COLORS.primary} size={20} />
+                                </TouchableOpacity>
+                            ) : !isMember && (
+                                <TouchableOpacity
                                     style={styles.joinBtn}
                                     onPress={(e) => {
                                         e.stopPropagation();
@@ -221,7 +332,133 @@ const SquadsScreen = ({ navigation }: any) => {
                     </View>
                 )}
             </ScrollView>
-        </SafeAreaView>
+
+            {/* Dynamic Request Status Modal */}
+            <Modal
+                visible={showRequestModal}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setShowRequestModal(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContainer}>
+                        <TouchableOpacity
+                            style={styles.closeBtn}
+                            onPress={() => setShowRequestModal(false)}
+                        >
+                            <X color={COLORS.textSecondary} size={24} />
+                        </TouchableOpacity>
+
+                        {/* SUCCESS STATE */}
+                        {requestStatus === 'success' && (
+                            <>
+                                <View style={[styles.modalIconContainer, { borderColor: COLORS.primary, backgroundColor: 'rgba(143, 251, 185, 0.1)' }]}>
+                                    <CheckCircle color={COLORS.primary} size={40} />
+                                </View>
+                                <Text style={styles.modalTitle}>You're on the list!</Text>
+                                <Text style={styles.modalDescription}>
+                                    We have received your request to become a squad creator. We will review your profile and notify you once approved.
+                                </Text>
+                                <View style={styles.modalActions}>
+                                    <TouchableOpacity style={styles.primaryBtn} onPress={() => setShowRequestModal(false)}>
+                                        <Text style={styles.primaryBtnText}>Got it</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </>
+                        )}
+
+                        {/* PENDING STATE */}
+                        {requestStatus === 'pending' && (
+                            <>
+                                <View style={[styles.modalIconContainer, { borderColor: '#FF9500', backgroundColor: 'rgba(255, 149, 0, 0.1)' }]}>
+                                    <Clock color="#FF9500" size={40} />
+                                </View>
+                                <Text style={styles.modalTitle}>Request Pending</Text>
+                                <Text style={styles.modalDescription}>
+                                    Your request is currently under review by our team. This usually takes 24-48 hours.
+                                </Text>
+                                <View style={styles.modalActions}>
+                                    <TouchableOpacity style={styles.primaryBtn} onPress={() => setShowRequestModal(false)}>
+                                        <Text style={styles.primaryBtnText}>Close</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={[styles.shareBtn, { borderColor: '#FF453A' }]} onPress={handleRevokeRequest}>
+                                        <Text style={[styles.shareBtnText, { color: '#FF453A' }]}>Cancel Request</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </>
+                        )}
+
+                        {/* APPROVED STATE */}
+                        {requestStatus === 'approved' && (
+                            <>
+                                <View style={[styles.modalIconContainer, { borderColor: COLORS.primary, backgroundColor: 'rgba(143, 251, 185, 0.1)' }]}>
+                                    <ShieldCheck color={COLORS.primary} size={40} />
+                                </View>
+                                <Text style={styles.modalTitle}>You're Approved!</Text>
+                                <Text style={styles.modalDescription}>
+                                    Congratulations! You have been granted access to create squads.
+                                </Text>
+                                <View style={styles.modalActions}>
+                                    <TouchableOpacity style={styles.primaryBtn} onPress={() => { setShowRequestModal(false); navigation.navigate('CreateSquad'); }}>
+                                        <Text style={styles.primaryBtnText}>Create Squad</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={[styles.shareBtn, { borderColor: '#FF453A' }]} onPress={handleRevokeRequest}>
+                                        <Text style={[styles.shareBtnText, { color: '#FF453A' }]}>Revoke Access</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </>
+                        )}
+
+                        {/* REJECTED STATE */}
+                        {requestStatus === 'rejected' && (
+                            <>
+                                <View style={[styles.modalIconContainer, { borderColor: '#FF453A', backgroundColor: 'rgba(255, 69, 58, 0.1)' }]}>
+                                    <AlertTriangle color="#FF453A" size={40} />
+                                </View>
+                                <Text style={styles.modalTitle}>Request Update</Text>
+                                <Text style={styles.modalDescription}>
+                                    Unfortunately, your request to become a squad creator was not approved at this time.
+                                </Text>
+                                <View style={styles.modalActions}>
+                                    <TouchableOpacity style={styles.primaryBtn} onPress={() => setShowRequestModal(false)}>
+                                        <Text style={styles.primaryBtnText}>Close</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </>
+                        )}
+
+                        {/* INITIAL / NONE / REVOKED STATE */}
+                        {(requestStatus === 'none' || requestStatus === 'revoked') && (
+                            <>
+                                <View style={styles.modalIconContainer}>
+                                    <ShieldCheck color={COLORS.primary} size={40} />
+                                </View>
+                                <Text style={styles.modalTitle}>Request a Squad</Text>
+                                <Text style={styles.modalDescription}>
+                                    Building a quality community is our top priority. New squad creation is currently by request only.
+                                </Text>
+                                <Text style={styles.modalDescription}>
+                                    Would you like to join the exclusive creator waitlist?
+                                </Text>
+                                <View style={styles.modalActions}>
+                                    <TouchableOpacity style={styles.primaryBtn} onPress={handleJoinWaitlist} disabled={requestLoading}>
+                                        {requestLoading ? (
+                                            <Text style={styles.primaryBtnText}>Processing...</Text>
+                                        ) : (
+                                            <Text style={styles.primaryBtnText}>Join Waitlist</Text>
+                                        )}
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={styles.shareBtn} onPress={handleShareRequest}>
+                                        <Share2 color={COLORS.white} size={18} />
+                                        <Text style={styles.shareBtnText}>Share Link</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </>
+                        )}
+                    </View>
+                </View>
+            </Modal>
+        </View >
     );
 };
 
@@ -350,6 +587,30 @@ const styles = StyleSheet.create({
         fontFamily: FONTS.display.bold,
         color: COLORS.background,
     },
+    leaderBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: COLORS.primary,
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+        gap: 2,
+    },
+    leaderBadgeText: {
+        fontSize: 8,
+        fontFamily: FONTS.display.bold,
+        color: COLORS.background,
+    },
+    manageBtn: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: COLORS.primary,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(143, 251, 185, 0.1)',
+    },
     squadDesc: {
         fontSize: 13,
         fontFamily: FONTS.body.regular,
@@ -435,6 +696,90 @@ const styles = StyleSheet.create({
         color: COLORS.textSecondary,
         fontSize: 14,
         fontFamily: FONTS.body.regular,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.8)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: SPACING.lg,
+    },
+    modalContainer: {
+        width: '100%',
+        backgroundColor: COLORS.surface,
+        borderRadius: 24,
+        padding: SPACING.xl,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        position: 'relative',
+    },
+    closeBtn: {
+        position: 'absolute',
+        top: 16,
+        right: 16,
+        padding: 4,
+        zIndex: 10,
+    },
+    modalIconContainer: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: 'rgba(143, 251, 185, 0.1)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: SPACING.lg,
+        borderWidth: 1,
+        borderColor: 'rgba(143, 251, 185, 0.2)',
+    },
+    modalTitle: {
+        fontSize: 24,
+        fontFamily: FONTS.display.bold,
+        color: COLORS.white,
+        marginBottom: SPACING.md,
+        textAlign: 'center',
+    },
+    modalDescription: {
+        fontSize: 15,
+        fontFamily: FONTS.body.regular,
+        color: COLORS.textSecondary,
+        textAlign: 'center',
+        marginBottom: SPACING.sm,
+        lineHeight: 22,
+    },
+    modalActions: {
+        width: '100%',
+        gap: 12,
+        marginTop: SPACING.xl,
+    },
+    primaryBtn: {
+        backgroundColor: COLORS.primary,
+        height: 50,
+        borderRadius: 25,
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '100%',
+    },
+    primaryBtnText: {
+        fontSize: 16,
+        fontFamily: FONTS.display.semiBold,
+        color: COLORS.background,
+    },
+    shareBtn: {
+        flexDirection: 'row',
+        height: 50,
+        borderRadius: 25,
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '100%',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
+        gap: 8,
+    },
+    shareBtnText: {
+        fontSize: 16,
+        fontFamily: FONTS.display.medium,
+        color: COLORS.white,
     },
 });
 

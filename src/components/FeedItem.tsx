@@ -1,10 +1,13 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions } from 'react-native';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions, Animated, Platform } from 'react-native';
 import HLSVideoPlayer from './HLSVideoPlayer';
-import { Heart, MessageCircle, Share2, UserCheck, UserPlus } from 'lucide-react-native';
+import { Heart, MessageCircle, Share2, UserCheck, UserPlus, ChevronUp, Plus } from 'lucide-react-native';
 import { COLORS, SPACING } from '../constants/theme';
 import { Post } from '../api/postService';
 import { firebaseAuth } from '../api/firebase';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { PanGestureHandler, State } from 'react-native-gesture-handler';
+import { useNavigation } from '@react-navigation/native';
 
 const { width, height } = Dimensions.get('window');
 
@@ -36,90 +39,152 @@ const FeedItem = ({
     isChildMode
 }: FeedItemProps) => {
     const videoRef = useRef<any>(null);
+    const insets = useSafeAreaInsets();
+    const navigation = useNavigation<any>();
     const [paused, setPaused] = useState(true);
 
+    // Animation for the "Swipe up" prompt
+    const swipeAnim = useRef(new Animated.Value(0)).current;
+
     useEffect(() => {
-        // Play only when visible and screen is focused
         setPaused(!isVisible || !isFocused);
+
+        if (isVisible && isFocused) {
+            // Animate swipe prompt
+            Animated.loop(
+                Animated.sequence([
+                    Animated.timing(swipeAnim, {
+                        toValue: -10,
+                        duration: 800,
+                        useNativeDriver: true,
+                    }),
+                    Animated.timing(swipeAnim, {
+                        toValue: 0,
+                        duration: 800,
+                        useNativeDriver: true,
+                    })
+                ])
+            ).start();
+        } else {
+            swipeAnim.setValue(0);
+        }
     }, [isVisible, isFocused]);
 
+    const onGestureEvent = Animated.event(
+        [{ nativeEvent: { translationY: new Animated.Value(0) } }],
+        { useNativeDriver: true }
+    );
+
+    const onHandlerStateChange = ({ nativeEvent }: any) => {
+        if (nativeEvent.oldState === State.ACTIVE) {
+            // Swipe Right detection (positive translationX)
+            if (nativeEvent.translationX > 80) {
+                navigation.navigate('Upload', { responseTo: item.id });
+            }
+        }
+    };
+
     return (
-        <View style={styles.container}>
-            <HLSVideoPlayer
-                videoUrl={item.videoUrl}
-                thumbnail={item.thumbnailUrl}
-                paused={paused}
-                repeat={true}
-                style={styles.video}
-            />
+        <PanGestureHandler
+            onGestureEvent={onGestureEvent}
+            onHandlerStateChange={onHandlerStateChange}
+        >
+            <View style={[styles.container, { height: height - (Platform.OS === 'android' ? 0 : insets.bottom) }]}>
+                <HLSVideoPlayer
+                    videoUrl={item.videoUrl}
+                    thumbnail={item.thumbnailUrl}
+                    paused={paused}
+                    repeat={true}
+                    style={styles.video}
+                />
 
-            <View style={styles.overlay}>
-                {/* Right Actions */}
-                <View style={styles.rightActions}>
-                    <TouchableOpacity style={styles.actionBtn} onPress={() => onLike(item.id)}>
-                        <Heart
-                            color={isLiked ? COLORS.primary : COLORS.white}
-                            fill={isLiked ? COLORS.primary : 'transparent'}
-                            size={32}
-                            strokeWidth={1.5}
-                        />
-                        <Text style={styles.actionText}>{item.likes}</Text>
-                    </TouchableOpacity>
+                <View style={[styles.overlay, { paddingTop: insets.top, paddingBottom: insets.bottom + 80 }]}>
 
-                    {!isChildMode && (
-                        <TouchableOpacity style={styles.actionBtn} onPress={() => onComment(item.id)}>
-                            <MessageCircle color={COLORS.white} size={32} strokeWidth={1.5} />
-                            <Text style={styles.actionText}>{item.comments}</Text>
+                    {/* Swipe Up Hint */}
+                    <Animated.View style={[styles.swipeHint, { transform: [{ translateY: swipeAnim }] }]}>
+                        <TouchableOpacity
+                            style={styles.swipeHintContent}
+                            onPress={() => navigation.navigate('ResponseThread', { postId: item.id, level: 0 })}
+                        >
+                            <ChevronUp color={COLORS.white} size={20} />
+                            <Text style={styles.swipeHintText}>Swipe up for responses</Text>
                         </TouchableOpacity>
-                    )}
+                    </Animated.View>
 
-                    <TouchableOpacity style={styles.actionBtn} onPress={() => onShare(item)}>
-                        <Share2 color={COLORS.white} size={32} strokeWidth={1.5} />
-                        <Text style={styles.actionText}>{item.shares || 'Share'}</Text>
-                    </TouchableOpacity>
-                </View>
-
-                {/* Bottom Info */}
-                <View style={styles.bottomInfo}>
-                    <View style={styles.userInfo}>
-                        <TouchableOpacity onPress={() => onProfilePress(item.userId)}>
+                    {/* Right Actions */}
+                    <View style={styles.rightActions}>
+                        <TouchableOpacity onPress={() => onProfilePress(item.userId)} style={styles.avatarContainer}>
                             <Image
                                 source={{ uri: item.userAvatar || `https://ui-avatars.com/api/?name=${item.username}` }}
-                                style={styles.avatar}
+                                style={styles.avatarLarge}
                             />
-                        </TouchableOpacity>
-                        <View style={{ flex: 1 }}>
-                            <View style={styles.usernameRow}>
-                                <TouchableOpacity onPress={() => onProfilePress(item.userId)}>
-                                    <Text style={styles.username}>@{item.username}</Text>
+                            {firebaseAuth.currentUser?.uid !== item.userId && (
+                                <TouchableOpacity
+                                    style={styles.addIcon}
+                                    onPress={() => onFollow(item.userId)}
+                                >
+                                    <View style={[styles.plusBadge, { backgroundColor: isFollowing ? COLORS.success : COLORS.primary }]}>
+                                        <Plus color={COLORS.white} size={12} strokeWidth={3} />
+                                    </View>
                                 </TouchableOpacity>
-                                {firebaseAuth.currentUser?.uid !== item.userId && (
-                                    <TouchableOpacity
-                                        style={[styles.followBtn, isFollowing && styles.followingBtn]}
-                                        onPress={() => onFollow(item.userId)}
-                                    >
-                                        {isFollowing ? (
-                                            <UserCheck color={COLORS.white} size={14} />
-                                        ) : (
-                                            <UserPlus color={COLORS.primary} size={14} />
-                                        )}
-                                    </TouchableOpacity>
-                                )}
+                            )}
+                        </TouchableOpacity>
+
+                        <TouchableOpacity style={styles.actionBtn} onPress={() => onLike(item.id)}>
+                            <Heart
+                                color={isLiked ? COLORS.primary : COLORS.white}
+                                fill={isLiked ? COLORS.primary : 'transparent'}
+                                size={32}
+                                strokeWidth={2}
+                            />
+                            <Text style={styles.actionText}>{item.likes}</Text>
+                        </TouchableOpacity>
+
+                        {!isChildMode && (
+                            <TouchableOpacity style={styles.actionBtn} onPress={() => onComment(item.id)}>
+                                <MessageCircle color={COLORS.white} size={32} strokeWidth={2} />
+                                <Text style={styles.actionText}>{item.comments}</Text>
+                            </TouchableOpacity>
+                        )}
+
+                        <TouchableOpacity style={styles.actionBtn} onPress={() => onShare(item)}>
+                            <Share2 color={COLORS.white} size={32} strokeWidth={2} />
+                            <Text style={styles.actionText}>{item.shares || 0}</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.respondBtn}
+                            onPress={() => navigation.navigate('Upload', { responseTo: item.id })}
+                        >
+                            <View style={styles.respondIconContainer}>
+                                <Plus color={COLORS.background} size={24} strokeWidth={3} />
                             </View>
-                            <Text style={styles.caption} numberOfLines={2}>{item.caption}</Text>
-                        </View>
+                            <Text style={styles.respondText}>Respond</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* Bottom Info */}
+                    <View style={styles.bottomInfo}>
+                        <TouchableOpacity onPress={() => onProfilePress(item.userId)}>
+                            <Text style={styles.username}>@{item.username}</Text>
+                        </TouchableOpacity>
+                        <Text style={styles.caption} numberOfLines={3}>{item.caption}</Text>
+
+                        {item.hashtags && item.hashtags.length > 0 && (
+                            <Text style={styles.hashtags}>
+                                {item.hashtags.map(h => `#${h} `)}
+                            </Text>
+                        )}
                     </View>
                 </View>
             </View>
-        </View>
+        </PanGestureHandler>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         width: width,
-        height: height - 70, // Adjust based on tab bar height if needed, usually full height
-        justifyContent: 'center',
         backgroundColor: '#000',
     },
     video: {
@@ -129,79 +194,119 @@ const styles = StyleSheet.create({
     overlay: {
         ...StyleSheet.absoluteFillObject,
         justifyContent: 'flex-end',
-        padding: SPACING.md,
-        paddingBottom: 20, // Add bottom padding for safety
+        paddingHorizontal: SPACING.md,
+    },
+    swipeHint: {
+        position: 'absolute',
+        top: '15%',
+        alignSelf: 'center',
+        alignItems: 'center',
+    },
+    swipeHintContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+        gap: 4,
+    },
+    swipeHintText: {
+        color: COLORS.white,
+        fontSize: 12,
+        fontWeight: '600',
     },
     rightActions: {
         position: 'absolute',
         right: 10,
-        bottom: 120, // Adjust vertically
+        bottom: 100,
         alignItems: 'center',
         gap: 20,
+    },
+    avatarContainer: {
+        marginBottom: 10,
+        alignItems: 'center',
+    },
+    avatarLarge: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        borderWidth: 2,
+        borderColor: COLORS.white,
+    },
+    addIcon: {
+        position: 'absolute',
+        bottom: -5,
+        backgroundColor: 'transparent',
+    },
+    plusBadge: {
+        width: 20,
+        height: 20,
+        borderRadius: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: '#000',
     },
     actionBtn: {
         alignItems: 'center',
     },
     actionText: {
         color: COLORS.white,
-        fontSize: 12,
-        fontWeight: '600',
+        fontSize: 13,
+        fontWeight: '700',
         marginTop: 4,
-        textShadowColor: 'rgba(0,0,0,0.5)',
+        textShadowColor: 'rgba(0,0,0,0.8)',
         textShadowOffset: { width: 1, height: 1 },
         textShadowRadius: 3,
     },
+    respondBtn: {
+        alignItems: 'center',
+        marginTop: 5,
+    },
+    respondIconContainer: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: COLORS.primary,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 4,
+        borderColor: 'rgba(255,255,255,0.2)',
+    },
+    respondText: {
+        color: COLORS.primary,
+        fontSize: 11,
+        fontWeight: '800',
+        marginTop: 4,
+        textTransform: 'uppercase',
+    },
     bottomInfo: {
-        width: '85%',
-        marginBottom: 10,
-    },
-    userInfo: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: SPACING.sm,
-    },
-    avatar: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        borderWidth: 2,
-        borderColor: COLORS.white,
-        marginRight: 10,
-    },
-    usernameRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        marginBottom: 4,
+        width: '75%',
+        marginBottom: 20,
     },
     username: {
         color: COLORS.white,
         fontWeight: '800',
-        fontSize: 16,
-        textShadowColor: 'rgba(0,0,0,0.5)',
+        fontSize: 17,
+        marginBottom: 6,
+        textShadowColor: 'rgba(0,0,0,0.8)',
         textShadowOffset: { width: 1, height: 1 },
-        textShadowRadius: 3,
-    },
-    followBtn: {
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        borderRadius: 12,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    followingBtn: {
-        backgroundColor: 'rgba(0,0,0,0.4)',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.3)',
+        textShadowRadius: 4,
     },
     caption: {
         color: COLORS.white,
-        fontSize: 14,
-        lineHeight: 20,
-        textShadowColor: 'rgba(0,0,0,0.5)',
+        fontSize: 15,
+        lineHeight: 21,
+        textShadowColor: 'rgba(0,0,0,0.8)',
         textShadowOffset: { width: 1, height: 1 },
-        textShadowRadius: 3,
+        textShadowRadius: 4,
+    },
+    hashtags: {
+        color: COLORS.primary,
+        fontSize: 14,
+        fontWeight: '700',
+        marginTop: 6,
     },
 });
 

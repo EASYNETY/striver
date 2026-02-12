@@ -96,7 +96,21 @@ const ProfileScreen = ({ navigation }: any) => {
             return;
         }
         try {
-            const userPosts = await postService.getUserPosts(profile.uid);
+            setLoading(true);
+            let userPosts: Post[] = [];
+
+            if (activeTab === 'Videos') {
+                userPosts = await postService.getUserPosts(profile.uid);
+                // Filter out responses from the main 'Videos' grid to keep it clean
+                userPosts = userPosts.filter(p => !p.responseTo);
+            } else if (activeTab === 'Responses') {
+                const allPosts = await postService.getUserPosts(profile.uid);
+                userPosts = allPosts.filter(p => !!p.responseTo);
+            } else if (activeTab === 'Challenges') {
+                const allPosts = await postService.getUserPosts(profile.uid);
+                userPosts = allPosts.filter(p => !!p.squadId || !!p.challengeId);
+            }
+
             setPosts(userPosts);
         } catch (error) {
             console.error('Error loading posts:', error);
@@ -302,7 +316,7 @@ const ProfileScreen = ({ navigation }: any) => {
                     </View>
                     <View style={styles.statBox}>
                         <Text style={styles.statValue}>{profile.replies}</Text>
-                        <Text style={styles.statLabel}>Replies</Text>
+                        <Text style={styles.statLabel}>Responses</Text>
                     </View>
                     <View style={styles.statBox}>
                         <Text style={styles.statValue}>{profile.coins}</Text>
@@ -312,7 +326,7 @@ const ProfileScreen = ({ navigation }: any) => {
 
                 <View style={styles.tabsSection}>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsScroll}>
-                        {['Videos', 'Replies', 'Challenges', 'Coins'].map(tab => (
+                        {['Videos', 'Responses', 'Challenges', 'Coins'].map(tab => (
                             <TouchableOpacity
                                 key={tab}
                                 style={[styles.tabBtn, activeTab === tab && styles.tabBtnActive]}

@@ -1,0 +1,11 @@
+{
+    "applinks": {
+        "apps": [],
+        "details": [
+            {
+                "appID": "5567538356.com.striverapp",
+                "paths": [ "*" ]
+            }
+        ]
+    }
+}

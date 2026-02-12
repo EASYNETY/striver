@@ -1,5 +1,18 @@
 {
   "projects": {
     "default": "striver-app-48562"
-  }
+  },
+  "targets": {
+    "striver-app-48562": {
+      "hosting": {
+        "admin": [
+          "striver-app-48562"
+        ],
+        "links": [
+          "striver-links"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

@@ -256,3 +256,47 @@ export const onChallengeInvite = functions.onDocumentCreated('challengeInvites/{
     console.error('Error sending challenge invite notification:', error);
   }
 });
+
+/**
+ * Send push notification when a notification document is created in users/{userId}/notifications
+ */
+export const onUserNotificationCreated = functions.onDocumentCreated('users/{userId}/notifications/{notificationId}', async (event) => {
+  if (!admin.apps.length) {
+    admin.initializeApp();
+  }
+  const snap = event.data;
+  if (!snap) return;
+
+  const notificationData = snap.data();
+  const { userId } = event.params;
+  const { title, message, type } = notificationData;
+
+  try {
+    const userDoc = await admin.firestore().collection('users').doc(userId).get();
+    const userData = userDoc.data();
+    const fcmToken = userData?.fcmToken;
+
+    if (!fcmToken) {
+      console.log(`User ${userId} has no FCM token`);
+      return;
+    }
+
+    const payload = {
+      notification: {
+        title: title || 'New Notification',
+        body: message || 'You have a new notification',
+      },
+      data: {
+        type: type || 'general',
+        notificationId: event.params.notificationId,
+        userId: userId
+      },
+      token: fcmToken,
+    };
+
+    await admin.messaging().send(payload);
+    console.log(`Push notification sent to user ${userId}`);
+  } catch (error) {
+    console.error('Error sending push notification:', error);
+  }
+});

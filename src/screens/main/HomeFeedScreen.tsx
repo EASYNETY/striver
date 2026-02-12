@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { View, StyleSheet, FlatList, Dimensions, StatusBar, Text, TouchableOpacity, Image, Share, RefreshControl, Modal, SafeAreaView, TextInput, Platform, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HLSVideoPlayer from '../../components/HLSVideoPlayer';
@@ -14,6 +14,7 @@ import { firebaseAuth } from '../../api/firebase';
 import { shareContent } from '../../utils/deepLink';
 import { CAREER_TIERS, EARNING_RULES } from '../../constants/rewards';
 import { ScrollView as GestureScrollView } from 'react-native-gesture-handler';
+import { WebView } from 'react-native-webview';
 
 const { height: WINDOW_HEIGHT, width: WINDOW_WIDTH } = Dimensions.get('window');
 
@@ -531,7 +532,7 @@ const MemoizedPostItem = React.memo(({ item, index, isFocused, visibleItemIndex,
     }, [index, scrollToIndex]);
 
     const handleNavigateToUpload = useCallback(() => {
-        navigation.navigate('Upload', { 
+        navigation.navigate('Upload', {
             responseTo: item.id,
             isResponse: true
         });
@@ -549,47 +550,29 @@ const MemoizedPostItem = React.memo(({ item, index, isFocused, visibleItemIndex,
         );
     }, [item.id, onRelevancyChange]);
 
-    // Gesture Handling for this specific video item
-    const swipeUpGesture = Gesture.Pan()
-        .activeOffsetY(-50)
-        .failOffsetX([-50, 50])
+    // Gesture Handling for this specific video item - memoized to prevent recreation
+    const swipeUpGesture = useMemo(() => Gesture.Pan()
+        .activeOffsetY(-30)
         .onEnd((e) => {
             'worklet';
-            if (e.velocityY < -500) { // Swipe up detected
+            if (e.velocityY < -300 || e.translationY < -80) {
                 runOnJS(handleExpandThreads)();
             }
-        });
+        }), [handleExpandThreads]);
 
-    const swipeLeftGesture = Gesture.Pan()
-        .activeOffsetX(-50)
-        .failOffsetY([-50, 50])
-        .onEnd((e) => {
-            'worklet';
-            if (e.velocityX < -500) { // Swipe left detected
-                runOnJS(handleScrollToNext)();
-            }
-        });
-
-    const swipeRightGesture = Gesture.Pan()
-        .activeOffsetX(50)
-        .failOffsetY([-50, 50])
-        .onEnd((e) => {
-            'worklet';
-            if (e.velocityX > 500) { // Swipe right detected
-                runOnJS(handleNavigateToUpload)();
-            }
-        });
-
-    const longPressGesture = Gesture.LongPress()
+    const longPressGesture = useMemo(() => Gesture.LongPress()
         .minDuration(800)
         .onEnd((e, success) => {
             'worklet';
             if (success) {
                 runOnJS(handleRelevancyAlert)();
             }
-        });
+        }), [handleRelevancyAlert]);
 
-    const composedGesture = Gesture.Simultaneous(swipeUpGesture, swipeLeftGesture, swipeRightGesture, longPressGesture);
+    const composedGesture = useMemo(() =>
+        Gesture.Simultaneous(swipeUpGesture, longPressGesture),
+        [swipeUpGesture, longPressGesture]
+    );
 
     return (
         <GestureDetector gesture={composedGesture}>
@@ -616,11 +599,16 @@ const MemoizedPostItem = React.memo(({ item, index, isFocused, visibleItemIndex,
 
                 {/* Engagement Overlay */}
                 <View style={styles.overlay}>
-                    {/* Swipe Up Hint */}
-                    <View style={styles.swipeHint}>
-                        <ChevronUp color={COLORS.white} size={16} />
-                        <Text style={styles.swipeHintText}>Swipe up for responses</Text>
-                    </View>
+                    {/* Swipe Up Hint - Interactive Fallback */}
+                    <Animated.View style={[styles.swipeHint, { transform: [{ translateY: -10 }] }]}>
+                        <TouchableOpacity
+                            onPress={() => onExpandThreads(item.id)}
+                            style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                        >
+                            <ChevronUp color={COLORS.white} size={20} />
+                            <Text style={styles.swipeHintText}>Swipe up for responses</Text>
+                        </TouchableOpacity>
+                    </Animated.View>
 
                     <View style={styles.rightActions}>
                         {/* Striver Level Badge (Icon Only per user request) */}
@@ -655,10 +643,18 @@ const MemoizedPostItem = React.memo(({ item, index, isFocused, visibleItemIndex,
                         )}
 
                         <TouchableOpacity
+                            style={styles.actionBtn}
+                            onPress={() => onExpandThreads(item.id)}
+                        >
+                            <MessageSquare color={COLORS.primary} size={32} />
+                            <Text style={styles.actionText}>{item.responses || 0}</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
                             style={[styles.actionBtn, styles.responseBtn]}
-                            onPress={() => navigation.navigate('Upload', { 
+                            onPress={() => navigation.navigate('Upload', {
                                 responseTo: item.id,
-                                isResponse: true  // Flag to track this is a response
+                                isResponse: true
                             })}
                         >
                             <Plus color={COLORS.background} size={28} strokeWidth={3} />
@@ -714,9 +710,9 @@ const MemoizedPostItem = React.memo(({ item, index, isFocused, visibleItemIndex,
                                 style={styles.challengeBtn}
                                 onPress={() => {
                                     // Navigate to upload screen with challenge context
-                                    navigation.navigate('Upload', { 
+                                    navigation.navigate('Upload', {
                                         challengeId: item.squadId,
-                                        challengePostId: item.id 
+                                        challengePostId: item.id
                                     });
                                 }}
                             >
@@ -732,12 +728,22 @@ const MemoizedPostItem = React.memo(({ item, index, isFocused, visibleItemIndex,
         </GestureDetector>
     );
 }, (prevProps, nextProps) => {
-    // Custom comparison function for better performance
+    // Optimized comparison: only re-render if essential playback state or content changes
+    const prevPaused = !prevProps.isFocused || prevProps.visibleItemIndex !== prevProps.index;
+    const nextPaused = !nextProps.isFocused || nextProps.visibleItemIndex !== nextProps.index;
+
+    // If the paused state didn't change and the item is the same, skip re-render
+    // This is CRITICAL for ANR prevention during vertical scrolling
+    if (prevPaused === nextPaused && prevProps.item.id === nextProps.item.id) {
+        // Still need to check if things liked likes/follows changed IF we are currently visible
+        if (nextPaused) return true; // Both paused, no need to update interactions
+    }
+
     return (
         prevProps.item.id === nextProps.item.id &&
         prevProps.index === nextProps.index &&
         prevProps.isFocused === nextProps.isFocused &&
-        prevProps.visibleItemIndex === nextProps.visibleItemIndex &&
+        prevPaused === nextPaused &&
         prevProps.likedPosts.has(prevProps.item.id) === nextProps.likedPosts.has(nextProps.item.id) &&
         prevProps.followingIds.has(prevProps.item.userId) === nextProps.followingIds.has(nextProps.item.userId) &&
         prevProps.isChildMode === nextProps.isChildMode &&
@@ -750,7 +756,7 @@ const HomeFeedScreen = () => {
     const insets = useSafeAreaInsets();
     const navigation = useNavigation<any>();
     const isFocused = useIsFocused();
-    const [activeTab, setActiveTab] = useState<'For You' | 'Following'>('For You');
+    const [activeTab, setActiveTab] = useState<'For You' | 'Following' | 'Spotlight'>('For You');
     const [posts, setPosts] = useState<Post[]>([]);
     const [userCoins, setUserCoins] = useState(0);
     const [loading, setLoading] = useState(true);
@@ -779,38 +785,42 @@ const HomeFeedScreen = () => {
         itemVisiblePercentThreshold: 80
     }).current;
 
+    const postsRef = useRef(posts);
+    useEffect(() => {
+        postsRef.current = posts;
+    }, [posts]);
+
     const lastTrackedIndex = useRef(-1);
     const awardCoinsDebounceTimer = useRef<NodeJS.Timeout | null>(null);
 
     const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
         if (viewableItems.length > 0) {
             const index = viewableItems[0].index;
-            if (index !== visibleItemIndex) {
-                setVisibleItemIndex(index);
+            // Always update state to handle playback
+            setVisibleItemIndex(index);
 
-                // Track video view for rewards - only if it's a new video
-                if (index !== lastTrackedIndex.current) {
-                    lastTrackedIndex.current = index;
-                    const currentPostId = posts[index]?.id;
-                    
-                    if (currentPostId && firebaseAuth.currentUser) {
-                        // Debounce coin awarding to prevent bridge congestion
-                        if (awardCoinsDebounceTimer.current) {
-                            clearTimeout(awardCoinsDebounceTimer.current);
-                        }
-                        awardCoinsDebounceTimer.current = setTimeout(async () => {
-                            try {
-                                await RewardService.trackActivity(
-                                    firebaseAuth.currentUser?.uid || '', 
-                                    'watch_video', 
-                                    { postId: currentPostId }
-                                );
-                                console.log('[HomeFeedScreen] Video watch tracked for rewards');
-                            } catch (error) {
-                                console.error('[HomeFeedScreen] Failed to track video watch:', error);
-                            }
-                        }, 1000); // Award coins after 1 second of stable view
+            // Track video view for rewards - only if it's a new video
+            if (index !== lastTrackedIndex.current) {
+                lastTrackedIndex.current = index;
+                const currentPostId = postsRef.current[index]?.id;
+
+                if (currentPostId && firebaseAuth.currentUser) {
+                    // Debounce coin awarding to prevent bridge congestion
+                    if (awardCoinsDebounceTimer.current) {
+                        clearTimeout(awardCoinsDebounceTimer.current);
                     }
+                    awardCoinsDebounceTimer.current = setTimeout(async () => {
+                        try {
+                            await RewardService.trackActivity(
+                                firebaseAuth.currentUser?.uid || '',
+                                'watch_video',
+                                { postId: currentPostId }
+                            );
+                            console.log('[HomeFeedScreen] Video watch tracked for rewards');
+                        } catch (error) {
+                            console.error('[HomeFeedScreen] Failed to track video watch:', error);
+                        }
+                    }, 1000); // Award coins after 1 second of stable view
                 }
             }
         }
@@ -823,7 +833,6 @@ const HomeFeedScreen = () => {
 
     useEffect(() => {
         let unsubscribe: () => void;
-        const limitByInterests = userProfile?.interests || [];
 
         if (activeTab === 'For You') {
             unsubscribe = postService.subscribeToFeedPosts((updatedPosts) => {
@@ -831,13 +840,7 @@ const HomeFeedScreen = () => {
                 if (updatedPosts.length === 0) {
                     console.warn('[HomeFeedScreen] No posts found - check Firestore for posts with status="active"');
                 }
-                // Initial personalization logic: prefer posts matching interests
-                const filtered = updatedPosts.sort((a, b) => {
-                    const aMatches = a.hashtags?.some(h => limitByInterests.includes(h)) ? 1 : 0;
-                    const bMatches = b.hashtags?.some(h => limitByInterests.includes(h)) ? 1 : 0;
-                    return bMatches - aMatches;
-                });
-                setPosts(filtered);
+                setPosts(updatedPosts);
                 setLoading(false);
                 setRefreshing(false);
             });
@@ -847,14 +850,6 @@ const HomeFeedScreen = () => {
                 setPosts(updatedPosts);
                 setLoading(false);
                 setRefreshing(false);
-
-                // Track following status
-                const currentUser = firebaseAuth.currentUser;
-                if (currentUser && updatedPosts.length > 0) {
-                    const ids = new Set<string>();
-                    updatedPosts.forEach(post => ids.add(post.userId));
-                    setFollowingIds(ids);
-                }
             });
         }
         return () => unsubscribe?.();
@@ -879,8 +874,11 @@ const HomeFeedScreen = () => {
             let fetchedPosts: Post[] = [];
             if (activeTab === 'For You') {
                 fetchedPosts = await postService.getFeedPosts();
-            } else {
+            } else if (activeTab === 'Following') {
                 fetchedPosts = await postService.getFollowingFeed();
+            } else {
+                // Spotlight - Coming Soon behavior
+                fetchedPosts = [];
             }
             setPosts(fetchedPosts);
         } catch (error) {
@@ -986,8 +984,8 @@ const HomeFeedScreen = () => {
     };
 
     const handleThreads = (postId: string) => {
-        setCurrentThreadId(postId);
-        setShowThreads(true);
+        // Navigate to dedicated response thread screen
+        navigation.navigate('ResponseThread', { postId, level: 0 });
     };
 
     const scrollToIndex = useCallback((targetIndex: number) => {
@@ -1037,6 +1035,9 @@ const HomeFeedScreen = () => {
                             <TouchableOpacity onPress={() => setActiveTab('For You')}>
                                 <Text style={[styles.tabText, activeTab === 'For You' && styles.tabActive]}>For You</Text>
                             </TouchableOpacity>
+                            <TouchableOpacity onPress={() => setActiveTab('Spotlight')}>
+                                <Text style={[styles.tabText, activeTab === 'Spotlight' && styles.tabActive]}>Spotlight</Text>
+                            </TouchableOpacity>
                         </View>
                     ) : (
                         <TouchableOpacity
@@ -1067,53 +1068,69 @@ const HomeFeedScreen = () => {
                     </View>
                 </View>
 
-                <FlatList
-                    ref={flatListRef}
-                    data={posts}
-                    renderItem={renderItem}
-                    keyExtractor={(item) => item.id}
-                    pagingEnabled
-                    showsVerticalScrollIndicator={false}
-                    snapToInterval={WINDOW_HEIGHT}
-                    snapToAlignment="start"
-                    decelerationRate="fast"
-                    onViewableItemsChanged={onViewableItemsChanged}
-                    viewabilityConfig={viewabilityConfig}
-                    initialNumToRender={1}
-                    maxToRenderPerBatch={2}
-                    windowSize={3}
-                    removeClippedSubviews={Platform.OS === 'android'}
-                    getItemLayout={(data, index) => ({
-                        length: WINDOW_HEIGHT,
-                        offset: WINDOW_HEIGHT * index,
-                        index: index ?? 0,
-                    })}
-                    refreshControl={
-                        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={COLORS.white} />
-                    }
-                    ListEmptyComponent={
-                        !loading ? (
-                            <View style={[styles.postContainer, { justifyContent: 'center', alignItems: 'center', padding: 40 }]}>
-                                <Home color={COLORS.textSecondary} size={64} />
-                                <Text style={[styles.username, { marginTop: 20, textAlign: 'center' }]}>
-                                    {activeTab === 'Following' ? 'No videos from people you follow' : 'No videos yet'}
-                                </Text>
-                                <Text style={[styles.caption, { textAlign: 'center', marginTop: 8 }]}>
-                                    {activeTab === 'Following' 
-                                        ? 'Follow some ballers to see their content here!' 
-                                        : 'Be the first to post a video!'}
-                                </Text>
-                                <TouchableOpacity
-                                    style={[styles.challengeBtn, { marginTop: 20 }]}
-                                    onPress={() => navigation.navigate('Upload')}
-                                >
-                                    <Camera color={COLORS.background} size={20} />
-                                    <Text style={styles.challengeBtnText}>CREATE VIDEO</Text>
-                                </TouchableOpacity>
-                            </View>
-                        ) : null
-                    }
-                />
+                {activeTab === 'Spotlight' ? (
+                    <View style={{ flex: 1, backgroundColor: COLORS.background, paddingTop: WINDOW_HEIGHT * 0.08 }}>
+                        <WebView
+                            source={{ uri: 'https://www.striver.football/' }}
+                            style={{ flex: 1 }}
+                            startInLoadingState={true}
+                            renderLoading={() => (
+                                <View style={[StyleSheet.absoluteFill, { justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background }]}>
+                                    <Text style={{ color: COLORS.primary, fontFamily: 'Outfit-Bold' }}>LOADING NEWS...</Text>
+                                </View>
+                            )}
+                        />
+                    </View>
+                ) : (
+                    <FlatList
+                        ref={flatListRef}
+                        data={posts}
+                        renderItem={renderItem}
+                        keyExtractor={(item) => item.id}
+                        horizontal
+                        pagingEnabled
+                        showsHorizontalScrollIndicator={false}
+                        snapToInterval={WINDOW_WIDTH}
+                        snapToAlignment="start"
+                        decelerationRate="fast"
+                        onViewableItemsChanged={onViewableItemsChanged}
+                        viewabilityConfig={viewabilityConfig}
+                        initialNumToRender={1}
+                        maxToRenderPerBatch={2}
+                        windowSize={3}
+                        removeClippedSubviews={Platform.OS === 'android'}
+                        getItemLayout={(data, index) => ({
+                            length: WINDOW_WIDTH,
+                            offset: WINDOW_WIDTH * index,
+                            index: index ?? 0,
+                        })}
+                        refreshControl={
+                            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={COLORS.white} />
+                        }
+                        ListEmptyComponent={
+                            !loading ? (
+                                <View style={[styles.postContainer, { justifyContent: 'center', alignItems: 'center', padding: 40 }]}>
+                                    <Home color={COLORS.textSecondary} size={64} />
+                                    <Text style={[styles.username, { marginTop: 20, textAlign: 'center' }]}>
+                                        {activeTab === 'Following' ? 'No videos from people you follow' : 'No videos yet'}
+                                    </Text>
+                                    <Text style={[styles.caption, { textAlign: 'center', marginTop: 8 }]}>
+                                        {activeTab === 'Following'
+                                            ? 'Follow some ballers to see their content here!'
+                                            : 'Be the first to post a video!'}
+                                    </Text>
+                                    <TouchableOpacity
+                                        style={[styles.challengeBtn, { marginTop: 20 }]}
+                                        onPress={() => navigation.navigate('Upload')}
+                                    >
+                                        <Camera color={COLORS.background} size={20} />
+                                        <Text style={styles.challengeBtnText}>CREATE VIDEO</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            ) : null
+                        }
+                    />
+                )}
 
                 {/* Search Overlay */}
                 <Modal visible={showSearch} animationType="fade" transparent>

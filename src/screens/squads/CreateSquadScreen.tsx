@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TextInput, TouchableOpacity, ScrollView, Switch, Image, Alert } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TextInput, TouchableOpacity, ScrollView, Switch, Image, Alert, Platform } from 'react-native';
 import { COLORS, SPACING, FONTS } from '../../constants/theme';
 import { ChevronLeft, Camera, Upload, ShieldAlert, Award } from 'lucide-react-native';
 import squadService from '../../api/squadService';
+import squadWaitlistService from '../../api/squadWaitlistService';
 import userService, { UserProfile } from '../../api/userService';
 import { firebaseAuth } from '../../api/firebase';
 import { CAREER_TIERS } from '../../constants/rewards';
@@ -20,14 +21,78 @@ const CreateSquadScreen = ({ navigation }: any) => {
     const [loading, setLoading] = useState(false);
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [userOwnedSquadsCount, setUserOwnedSquadsCount] = useState(0);
+    const [waitlistStatus, setWaitlistStatus] = useState<any>(null);
 
     React.useEffect(() => {
         const currentUser = firebaseAuth.currentUser;
         if (currentUser) {
             userService.getUserProfile(currentUser.uid).then(setUserProfile);
             squadService.getOwnedSquadsCount(currentUser.uid).then(setUserOwnedSquadsCount);
+            squadWaitlistService.getUserRequest(currentUser.uid).then(setWaitlistStatus);
         }
     }, []);
+
+    const handleWaitlistRequest = async () => {
+        console.log('[CreateSquadScreen] handleWaitlistRequest started');
+
+        let reason = 'User requested squad creation access'; // Default reason
+
+        if (Platform.OS === 'ios') {
+            const input = await new Promise<string | null>((resolve) => {
+                Alert.prompt(
+                    'Join Squad Creation Waitlist',
+                    'Please tell us why you want to create a squad:',
+                    [
+                        { text: 'Cancel', style: 'cancel', onPress: () => resolve(null) },
+                        { text: 'Submit', onPress: (text) => resolve(text || reason) }
+                    ],
+                    'plain-text'
+                );
+            });
+            if (input === null) {
+                console.log('[CreateSquadScreen] User cancelled input');
+                return;
+            }
+            reason = input;
+        } else {
+            // Android fallback since Alert.prompt is not supported
+            const confirmed = await new Promise<boolean>((resolve) => {
+                Alert.alert(
+                    'Join Squad Creation Waitlist',
+                    'Submit request to create a squad?',
+                    [
+                        { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+                        { text: 'Submit', onPress: () => resolve(true) }
+                    ]
+                );
+            });
+            if (!confirmed) {
+                console.log('[CreateSquadScreen] User cancelled android confirmation');
+                return;
+            }
+        }
+
+        setLoading(true);
+        console.log('[CreateSquadScreen] Submitting request with reason:', reason);
+        const result = await squadWaitlistService.submitRequest(reason);
+        console.log('[CreateSquadScreen] Submit result:', result);
+        setLoading(false);
+
+        Alert.alert(
+            result.success ? 'Request Submitted' : 'Request Failed',
+            result.message,
+            [{
+                text: 'OK', onPress: () => {
+                    if (result.success) {
+                        const currentUser = firebaseAuth.currentUser;
+                        if (currentUser) {
+                            squadWaitlistService.getUserRequest(currentUser.uid).then(setWaitlistStatus);
+                        }
+                    }
+                }
+            }]
+        );
+    };
 
     const handleCreate = async () => {
         if (!userProfile) return;
@@ -38,7 +103,30 @@ const CreateSquadScreen = ({ navigation }: any) => {
             return;
         }
 
-        // 2. Career Tier Check: Minimum 'Academy' to create a squad
+        // 2. Waitlist Check: User must be approved to create squads
+        const currentUser = firebaseAuth.currentUser;
+        if (currentUser) {
+            const canCreate = await squadWaitlistService.canCreateSquad(currentUser.uid);
+            if (!canCreate) {
+                Alert.alert(
+                    'Squad Creation Access Required',
+                    waitlistStatus?.status === 'pending'
+                        ? 'Your squad creation request is pending admin approval. You will be notified once approved!'
+                        : waitlistStatus?.status === 'rejected'
+                            ? 'Your previous squad creation request was not approved. Please contact support for more information.'
+                            : 'Squad creation is currently limited. Would you like to join the waitlist?',
+                    waitlistStatus?.status === 'pending' || waitlistStatus?.status === 'rejected'
+                        ? [{ text: 'OK' }]
+                        : [
+                            { text: 'Cancel', style: 'cancel' },
+                            { text: 'Join Waitlist', onPress: handleWaitlistRequest }
+                        ]
+                );
+                return;
+            }
+        }
+
+        // 3. Career Tier Check: Minimum 'Academy' to create a squad
         const currentTierIndex = CAREER_TIERS.findIndex(t => t.id === userProfile.career_tier_id);
         const academyIndex = CAREER_TIERS.findIndex(t => t.id === 'academy');
 
@@ -164,7 +252,7 @@ const CreateSquadScreen = ({ navigation }: any) => {
                 {/* Additional Settings */}
                 <View style={styles.formSection}>
                     <Text style={styles.label}>Age Restriction</Text>
-                    <Text style={styles.settingDesc} style={{ marginBottom: 12, marginLeft: 4 }}>
+                    <Text style={[styles.settingDesc, { marginBottom: 12, marginLeft: 4 }]}>
                         Control who can join based on age for safety and compliance
                     </Text>
 

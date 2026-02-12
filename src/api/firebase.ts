@@ -1,25 +1,19 @@
-import { getApp, getApps, initializeApp } from '@react-native-firebase/app';
-import { getAuth } from '@react-native-firebase/auth';
-import { getFirestore } from '@react-native-firebase/firestore';
-import { getStorage } from '@react-native-firebase/storage';
-import { getFunctions } from '@react-native-firebase/functions';
-import { getAnalytics } from '@react-native-firebase/analytics';
+import auth from '@react-native-firebase/auth';
+import firestore from '@react-native-firebase/firestore';
+import storage from '@react-native-firebase/storage';
+import functions from '@react-native-firebase/functions';
+import analytics from '@react-native-firebase/analytics';
 
-// Initialize the default app if not already initialized
-let app;
-if (getApps().length === 0) {
-    app = initializeApp();
-} else {
-    app = getApp();
-}
+// React Native Firebase automatically initializes the default app
+// No need to call initializeApp() manually
 
-// Export modular instances (Linking them to the app instance)
-export const db = getFirestore(app);
-export const modularDb = db;
-export const firebaseAuth = getAuth(app);
-export const firebaseStorage = getStorage(app);
-export const cloudFunctions = getFunctions(app, 'us-central1');
-export const firebaseAnalytics = getAnalytics(app);
+// Export compat API instances (React Native Firebase default API)
+export const db = firestore();
+export const modularDb = db; // Alias for compatibility with existing code
+export const firebaseAuth = auth();
+export const firebaseStorage = storage();
+export const cloudFunctions = functions().httpsCallable;
+export const firebaseAnalytics = analytics();
 
 export const initAppCheck = async () => {
     console.log('App Check disabled for debugging');

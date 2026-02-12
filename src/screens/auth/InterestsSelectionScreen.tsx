@@ -116,7 +116,7 @@ const InterestsSelectionScreen = ({ navigation, route }: any) => {
                     <Search color={COLORS.textSecondary} size={20} />
                     <TextInput
                         style={styles.searchInput}
-                        placeholder="Search or add your idol..."
+                        placeholder="Search or add your mentor..."
                         placeholderTextColor={COLORS.textSecondary}
                         value={searchQuery}
                         onChangeText={setSearchQuery}

@@ -230,7 +230,7 @@ const RewardsScreen: React.FC<RewardsScreenProps> = ({ user: initialUser, naviga
     const renderTiersTab = () => (
         <ScrollView contentContainerStyle={styles.scrollContent}>
             <Text style={styles.sectionExplain}>
-                Earn career coins to climb the ranks from Future Star to GOAT. Your badge shows your status to the world!
+                Earn career coins to climb the ranks from Future Star to GOAT. Your rank shows your dedication to the game!
             </Text>
 
             {CAREER_TIERS.map((tier, index) => {
@@ -279,7 +279,7 @@ const RewardsScreen: React.FC<RewardsScreenProps> = ({ user: initialUser, naviga
             {renderProgressBar()}
 
             <View style={styles.tabs}>
-                {['earn', 'spend', 'tiers'].map(tab => (
+                {['earn', 'tiers'].map(tab => (
                     <TouchableOpacity
                         key={tab}
                         style={[styles.tab, activeTab === tab && styles.activeTab]}
@@ -294,13 +294,6 @@ const RewardsScreen: React.FC<RewardsScreenProps> = ({ user: initialUser, naviga
 
             <View style={{ flex: 1 }}>
                 {activeTab === 'earn' && renderEarnTab()}
-                {/* Spend Tab implementation can go here or be valid mock */}
-                {activeTab === 'spend' && (
-                    <View style={styles.centerEmpty}>
-                        <Text style={styles.emptyText}>Marketplace Coming Soon!</Text>
-                        <Text style={styles.subEmpty}>Spend your coins on frames, card packs, and more.</Text>
-                    </View>
-                )}
                 {activeTab === 'tiers' && renderTiersTab()}
             </View>
 

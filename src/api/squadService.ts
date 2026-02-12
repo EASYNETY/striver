@@ -30,11 +30,13 @@ export interface Squad {
     members: string[];
     memberCount: number;
     isPrivate: boolean;
+    isPremium?: boolean;
     capacity: number;
     kudosCost?: number;
     inviteCode?: string;
     tags?: string[];
     rules?: string;
+    price?: string;
     ageRestriction: 'all' | '13+' | '18+';
     createdAt: any;
 }
@@ -253,9 +255,20 @@ class SquadService {
     }
 
     // Update squad details (Admin/Creator only)
-    async updateSquad(squadId: string, data: Partial<Squad>): Promise<void> {
+    async updateSquad(squadId: string, data: Partial<Squad> & { imageUri?: string }): Promise<void> {
+        let updateData: any = { ...data };
+
+        if (data.imageUri) {
+            delete updateData.imageUri;
+            if (data.imageUri.startsWith('http')) {
+                updateData.image = data.imageUri;
+            } else {
+                updateData.image = await this.uploadSquadImage(data.imageUri);
+            }
+        }
+
         await updateDoc(doc(this.squadsCollection, squadId), {
-            ...data,
+            ...updateData,
             updatedAt: serverTimestamp(),
         });
     }

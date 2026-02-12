@@ -16,21 +16,33 @@
         }
     ],
     "firestore": {
-        "rules": "firestore.rules"
+        "rules": "firestore.rules",
+        "indexes": "firestore.indexes.json"
     },
-    "hosting": {
-        "site": "striver-app-48562",
-        "public": "admin-panel/dist",
-        "ignore": [
-            "firebase.json",
-            "**/.*",
-            "**/node_modules/**"
-        ],
-        "rewrites": [
-            {
-                "source": "**",
-                "destination": "/index.html"
-            }
-        ]
-    }
+    "hosting": [
+        {
+            "target": "admin",
+            "public": "admin-panel/dist",
+            "ignore": [
+                "firebase.json",
+                "**/.*",
+                "**/node_modules/**"
+            ],
+            "rewrites": [
+                {
+                    "source": "**",
+                    "destination": "/index.html"
+                }
+            ]
+        },
+        {
+            "target": "links",
+            "public": "public-site",
+            "ignore": [
+                "firebase.json",
+                "**/.*",
+                "**/node_modules/**"
+            ]
+        }
+    ]
 }
